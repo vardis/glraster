@@ -30,20 +30,32 @@ bool Texture::allocate() {
 
 	// allocate memory storage for the texture
 	if (m_textureTarget == GL_TEXTURE_1D) {
-		glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, m_width, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		glTexImage1D(GL_TEXTURE_1D, 0, m_internalFormat, m_width, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 	} else if (m_textureTarget == GL_TEXTURE_2D) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, m_internalFormat, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 	} else {
 		// TODO: support more texture types
 	}
 
 	if (m_useMipmaps) {
-		//TODO: allocate space for mipmap levels
+		_allocateMipmaps();
 		glGenerateMipmap(m_textureTarget);
 	}
 
 	m_allocated = true;
 	return true;
+}
+
+void Texture::_allocateMipmaps() {
+	uint32_t w = m_width;
+	uint32_t h = m_height;
+	uint16_t level = 1;
+	while (w > 1 || h > 1) {
+		if (w > 1) w >>= 1;
+		if (h > 1) h >>= 1;
+		glTexImage2D(GL_TEXTURE_2D, level, m_internalFormat, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		++level;
+	}
 }
 
 void Texture::configureGLState() {

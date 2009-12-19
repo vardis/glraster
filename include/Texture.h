@@ -114,6 +114,8 @@ public:
 
 	void configureGLState();
 
+private:
+	void _allocateMipmaps();
 };
 typedef struct Texture Texture;
 typedef shared_ptr<Texture> TexturePtr;

@@ -218,7 +218,7 @@ void loadModels() {
 	quadTex->m_width = quadTex->m_sourceWidth = 512;
 	quadTex->m_height = quadTex->m_sourceHeight = 512;
 	quadTex->m_textureTarget = GL_TEXTURE_2D;
-	quadTex->m_useMipmaps = false;
+	quadTex->m_useMipmaps = true;
 	quadTex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
 	quadTex->m_magFilter = TexFilter_Bilinear;
 	quadTex->allocate();

@@ -108,6 +108,8 @@ void RenderTargetTexture::bind() {
 
 void RenderTargetTexture::unbind() {
 	if (m_texture->m_useMipmaps) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_texture->m_texID);
 		glGenerateMipmap(m_texture->m_textureTarget);
 	}
 
