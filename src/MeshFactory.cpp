@@ -172,7 +172,6 @@ void MeshFactory::_copyVertexUVsToVertexElementArray(aiMesh* mesh, uint8_t uvSet
 			fData = reinterpret_cast<float*> (ve->m_data);
 			fData[i * elementCount] = mesh->mTextureCoords[uvSet][i].x;
 			fData[i * elementCount + 1] = mesh->mTextureCoords[uvSet][i].y;
-			std::cout << "u,v = " << fData[i * elementCount] << ", " << fData[i * elementCount + 1] << std::endl;
 			break;
 		case VertexFormat_FLOAT3:
 			fData = reinterpret_cast<float*> (ve->m_data);

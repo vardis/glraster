@@ -60,7 +60,7 @@ public:
 	String m_vertexShader;
 	String m_fragmentShader;
 
-	GLSLProgramPtr m_gpuProgram;
+	GLSLProgram m_gpuProgram;
 
 public:
 	Material();

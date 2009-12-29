@@ -20,41 +20,32 @@ Material::~Material() {
 #define Colour_to_float4(c, f) f[0] = c.r; f[1] = c.g; f[2] = c.b; f[3] = c.a;
 
 void Material::applyGLState() {
-	float c[4];
 
 	// create the shader program if a shader has been specified
-	if (m_gpuProgram) {
-		if (!m_gpuProgram->isCompiled() && (m_vertexShader.length() || m_fragmentShader.length())) {
-			GLuint vs = 0;
-			GLuint fs = 0;
-			if (m_vertexShader.length()) {
-				vs = m_gpuProgram->attachShader(m_vertexShader, GL_VERTEX_SHADER);
-				if (!vs) {
-					std::cerr << "Error while creating vertex shader from source " << m_vertexShader << std::endl;
-					//				std::cerr << m_shaders.getCompilationLog() << std::endl;
-				}
-			}
-			if (m_fragmentShader.length()) {
-				fs = m_gpuProgram->attachShader(m_fragmentShader, GL_FRAGMENT_SHADER);
-				if (!fs) {
-					std::cerr << "Error while creating fragment shader from source " << m_fragmentShader << std::endl;
-					//				std::cerr << m_shaders.getCompilationLog() << std::endl;
-				}
-			}
-			if (vs || fs) {
-				m_gpuProgram->compile();
-			}
+	if (!m_gpuProgram.isCompiled() && (m_vertexShader.length() || m_fragmentShader.length())) {
+		if (m_vertexShader.length()) {
+			m_gpuProgram.attachShaderFromFile(m_vertexShader, GL_VERTEX_SHADER);
+		}
+		if (m_fragmentShader.length()) {
+			m_gpuProgram.attachShaderFromFile(m_fragmentShader, GL_FRAGMENT_SHADER);
 		}
 
-		if (!m_gpuProgram->hasErrors()) {
-			m_gpuProgram->bind();
+		if (m_gpuProgram.compile()) {
+			if (!m_gpuProgram.link()) {
+				std::cerr << "Failed to link program\n";
+			}
 		} else {
-			glUseProgram(0);
+			std::cerr << "Failed to compiler program\n";
 		}
+	}
+
+	if (m_gpuProgram.isCompiled() && m_gpuProgram.isLinked() && !m_gpuProgram.hasErrors()) {
+		m_gpuProgram.bind();
 	} else {
 		glUseProgram(0);
 	}
 
+	float c[4];
 	Colour_to_float4(m_diffuse, c);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, c);
 
@@ -66,11 +57,11 @@ void Material::applyGLState() {
 
 	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, m_shininess);
 
-//	if (m_twoSided) {
-//		glDisable(GL_CULL_FACE);
-//	} else {
-//		glEnable(GL_CULL_FACE);
-//	}
+	//	if (m_twoSided) {
+	//		glDisable(GL_CULL_FACE);
+	//	} else {
+	//		glEnable(GL_CULL_FACE);
+	//	}
 	_applyTextureStack();
 }
 

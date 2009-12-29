@@ -19,6 +19,7 @@ public:
 	GLSLShaderPtr m_fragmentShader;
 	GLchar m_compileLog[MAX_LOG_SIZE];
 	bool m_compiled;
+	bool m_linked;
 	bool m_hasErrors;
 
 public:
@@ -26,14 +27,27 @@ public:
 	GLSLProgram(GLSLShaderPtr m_vertexShader, GLSLShaderPtr m_fragmentShader);
 	virtual ~GLSLProgram();
 
-	GLuint attachShader(GLSLShaderPtr shader);
-	GLuint attachShader(const String& source, GLuint shaderType);
-	GLuint attachShaderFromFile(const String& filename, GLuint shaderType);
+	void attachShader(GLSLShaderPtr shader);
+	void attachShader(const String& source, GLuint shaderType);
+	void attachShaderFromFile(const String& filename, GLuint shaderType);
+
+	GLSLShaderPtr getVertexsShader() {
+		return m_vertexShader;
+	}
+	GLSLShaderPtr getFragmentShader() {
+		return m_fragmentShader;
+	}
 
 	bool compile();
 	bool isCompiled() const {
 		return m_compiled;
 	}
+
+	bool link();
+	bool isLinked() const {
+		return m_linked;
+	}
+
 	bool hasErrors() const {
 		return m_hasErrors;
 	}
@@ -41,7 +55,7 @@ public:
 	void bind();
 	void unbind();
 
-	void _reset();
+	void reset();
 };
 typedef shared_ptr<GLSLProgram> GLSLProgramPtr;
 

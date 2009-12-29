@@ -196,7 +196,7 @@ void loadModels() {
 	billboardMat->m_name = "billboardMat";
 	billboardMat->m_twoSided = true;
 	billboardMat->m_diffuse.set(1.0f);
-	//	billboardMat->m_fragmentShader = "fs.glsl";
+//	billboardMat->m_fragmentShader = "fs.glsl";
 	billboardMat->m_textures = TextureStackPtr(new TextureStack());
 
 	Texture* tex = new Texture();

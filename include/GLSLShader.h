@@ -31,6 +31,10 @@ public:
 	bool hasErrors() const {
 		return m_hasErrors;
 	}
+	const char* getCompilationLog() {
+		return &m_compileLog[0];
+	}
+
 	static GLSLShader* createFromFile(const String& filename, GLuint shaderType);
 };
 

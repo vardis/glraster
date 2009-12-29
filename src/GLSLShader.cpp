@@ -12,7 +12,7 @@
 #include "GLSLShader.h"
 
 GLSLShader::GLSLShader(const String& shaderSource, GLuint shaderType) :
-	m_source(shaderSource), m_shaderType(GL_VERTEX_SHADER), m_shaderID(0), m_isCompiled(false), m_hasErrors(false) {
+	m_source(shaderSource), m_shaderType(shaderType), m_shaderID(0), m_isCompiled(false), m_hasErrors(false) {
 }
 
 GLSLShader::~GLSLShader() {
@@ -50,6 +50,7 @@ GLSLShader* GLSLShader::createFromFile(const String& filename, GLuint shaderType
 	while (fs >> ss.rdbuf())
 		;
 	String source = ss.str();
+	std::cout << source;
 	if (source.length() > 0) {
 		return new GLSLShader(source, shaderType);
 	} else {
