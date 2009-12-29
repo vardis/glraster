@@ -5,6 +5,7 @@
  *      Author: giorgos
  */
 #include "GLTutor.h"
+#include "Image.h"
 #include "ILTextureManager.h"
 
 #define ILUT_USE_OPENGL
@@ -14,6 +15,9 @@
 
 ILTextureManager::ILTextureManager() :
 	m_anisotropicFilterSupported(false), m_maxAnisotropy(1.0f) {
+	m_compress = false;
+	m_internalFormat = GL_RGBA;
+	m_generateMipmaps = true;
 	if (GLEW_EXT_texture_filter_anisotropic) {
 		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &m_maxAnisotropy);
 	}
@@ -23,103 +27,26 @@ ILTextureManager::~ILTextureManager() {
 }
 
 GLuint ILTextureManager::loadTexture(String filename, Texture* tex) {
-	ILuint imgId;
-	ilGenImages(1, &imgId);
-	ilBindImage(imgId);
-	if (!ilLoadImage(filename.c_str())) {
-		ILenum error = ilGetError();
-		if (error != IL_NO_ERROR) {
-			std::cerr << "error in ilLoadImage: " << error << std::endl;
-		}
+	Image* img = Image::load(filename);
+	if (!img) {
+		std::cerr << "Error loading texture " << filename << std::endl;
 		return 0;
 	}
 
-	GLsizei width = ilGetInteger(IL_IMAGE_WIDTH);
-	GLsizei height = ilGetInteger(IL_IMAGE_HEIGHT);
-	GLenum target = height > 1 ? GL_TEXTURE_2D : GL_TEXTURE_1D;
-
-	GLenum internalFormat = ilGetInteger(IL_IMAGE_BYTES_PER_PIXEL);
-	ILenum imgFormat = ilGetInteger(IL_IMAGE_FORMAT);
-	GLenum format;
-	bool hasAlpha = false;
-	switch (imgFormat) {
-	case IL_RGBA:
-		format = GL_RGBA;
-		hasAlpha = true;
-		std::cout << "enabling alpha for texture " << filename << "\n";
-		break;
-	case IL_BGR:
-		format = GL_BGR;
-		break;
-	case IL_BGRA:
-		format = GL_BGRA;
-		hasAlpha = true;
-		break;
-	case IL_LUMINANCE:
-		format = GL_LUMINANCE;
-		break;
-	case IL_RGB:
-	default:
-		format = GL_RGB;
-		break;
-	}
-
-	ILenum imgType = ilGetInteger(IL_IMAGE_TYPE);
-	GLenum type;
-	switch (imgType) {
-	case IL_BYTE:
-		type = GL_BYTE;
-		break;
-	case IL_UNSIGNED_BYTE:
-		type = GL_UNSIGNED_BYTE;
-		break;
-	case IL_INT:
-		type = GL_INT;
-		break;
-	case IL_FLOAT:
-		type = GL_FLOAT;
-		break;
-	case IL_UNSIGNED_INT:
-	default:
-		type = GL_UNSIGNED_INT;
-		break;
-	}
+	GLenum target = img->m_height > 1 ? GL_TEXTURE_2D : GL_TEXTURE_1D;
 
 	//	ILint origin = ilGetInteger(IL_IMAGE_ORIGIN);
 	//	if (origin != IL_ORIGIN_LOWER_LEFT) {
 	//		iluFlipImage();
 	//	}
 
-	GLuint texID;
-	if (tex && tex->m_texID) {
-		texID = tex->m_texID;
-	} else {
-		glGenTextures(1, &texID);
-	}
-	glBindTexture(target, texID);
-
-	glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
-
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-	glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	glPixelStorei(GL_UNPACK_SWAP_BYTES, IL_FALSE);
-	glTexImage2D(target, 0, internalFormat, width, height, 0, format, type, ilGetData());
-
 	if (tex) {
 		tex->m_filename = filename;
-		tex->m_texID = texID;
-		tex->m_sourceWidth = width;
-		tex->m_sourceHeight = height;
-		tex->m_width = tex->m_sourceWidth;
-		tex->m_height = tex->m_sourceHeight;
-		tex->m_textureTarget = target;
-		tex->m_internalFormat = internalFormat;
-		tex->m_hasAlpha = hasAlpha;
+		tex->fromImage(*img);
 
 		if (tex->m_useMipmaps) {
-			gluBuild2DMipmaps(target, internalFormat, width, height, format, type, ilGetData());
+			gluBuild2DMipmaps(target, img->m_format, img->m_width, img->m_height, img->m_format, img->m_type,
+					img->m_data);
 		}
 		tex->configureGLState();
 
@@ -127,19 +54,39 @@ GLuint ILTextureManager::loadTexture(String filename, Texture* tex) {
 		if (m_anisotropicFilterSupported) {
 			glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(tex->m_anisotropy, m_maxAnisotropy));
 		}
+		return tex->m_texID;
 
 	} else {
+		GLuint texID;
+		glGenTextures(1, &texID);
+		glBindTexture(target, texID);
+
+		glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+		//TODO: Get pixel store parameters from image
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+		glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+
+		if (target == GL_TEXTURE_1D) {
+			glTexImage1D(GL_TEXTURE_1D, 0, img->m_format, img->m_width, 0, img->m_format, img->m_type, img->m_data);
+		} else if (target == GL_TEXTURE_2D) {
+			glTexImage2D(GL_TEXTURE_2D, 0, img->m_format, img->m_width, img->m_height, 0, img->m_format, img->m_type,
+					img->m_data);
+		} else {
+			//TODO: support 3D textures
+		}
+
 		// set some defaults
 		glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_REPEAT);
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glPopClientAttrib();
+		return texID;
 	}
-	glPopClientAttrib();
-
-	ilDeleteImages(1, &imgId);
-	return texID;
 }
 
 void ILTextureManager::loadCubeMapTextures(String mapFilename, GLuint* texNames) {

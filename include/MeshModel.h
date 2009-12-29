@@ -15,8 +15,6 @@ class MeshModel: public Renderable {
 
 protected:
 	MeshPtr     m_mesh;
-	GLuint      m_vboID;
-	GLuint      m_iboID;
 
 public:
 	MeshModel(Mesh* mesh);
@@ -33,8 +31,6 @@ public:
 	virtual void renderGeometry();
 
 private:
-	void _updateVertexBuffer();
-	void _updateIndicesBuffer();
 	void _updateBounds();
 };
 

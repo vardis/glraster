@@ -20,7 +20,35 @@ enum CubeMap_Faces {
 #include "Texture.h"
 
 class ITextureManager {
+
+protected:
+	bool   m_compress;
+	GLenum m_internalFormat;
+	bool   m_generateMipmaps;
+
 public:
+
+	void setCompression(bool flag) {
+		m_compress = flag;
+	}
+	bool getCompression() const {
+		return m_compress;
+	}
+
+	void setInternalFormat(GLenum internalFormat) {
+		m_internalFormat = internalFormat;
+	}
+	GLenum getInternalFormat() const {
+		return m_internalFormat;
+	}
+
+	void setMipmapGeneration(bool flag) {
+		m_generateMipmaps = flag;
+	}
+	bool getMipmapGeneration() const {
+		return m_generateMipmaps;
+	}
+
 	virtual GLuint loadTexture(String filename, Texture* tex = 0) = 0;
 	virtual void loadCubeMapTextures(String mapFilename, GLuint* texNames) = 0;
 	virtual void disposeTexture(GLuint texName) = 0;

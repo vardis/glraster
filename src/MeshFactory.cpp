@@ -172,6 +172,7 @@ void MeshFactory::_copyVertexUVsToVertexElementArray(aiMesh* mesh, uint8_t uvSet
 			fData = reinterpret_cast<float*> (ve->m_data);
 			fData[i * elementCount] = mesh->mTextureCoords[uvSet][i].x;
 			fData[i * elementCount + 1] = mesh->mTextureCoords[uvSet][i].y;
+			std::cout << "u,v = " << fData[i * elementCount] << ", " << fData[i * elementCount + 1] << std::endl;
 			break;
 		case VertexFormat_FLOAT3:
 			fData = reinterpret_cast<float*> (ve->m_data);
@@ -273,6 +274,9 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 	VertexElement* ve = vf->addElement(Vertex_Pos, format, 0, posData);
 	offset += importedMesh->mNumVertices * formatSize;
 	_copyVertexPosToVertexElementArray(importedMesh, ve);
+	ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
+
+	//TODO: ve->data can now be deallocated
 
 	// Vertex_Normal vertex element, optional
 	if (importedMesh->HasNormals()) {
@@ -281,6 +285,7 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 		ve = vf->addElement(Vertex_Normal, format, offset, normalArray);
 		_copyVertexNormalsToVertexElementArray(importedMesh, ve);
 		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
+		ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 	}
 
 	if (importedMesh->HasVertexColors(0)) {
@@ -289,6 +294,7 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 		ve = vf->addElement(Vertex_Color, VertexFormat_FLOAT4, offset, colorArray);
 		_copyVertexColorsToVertexElementArray(importedMesh, ve);
 		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
+		ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 	}
 
 	for (uint8_t t = 0; t < AI_MAX_NUMBER_OF_TEXTURECOORDS; t++) {
@@ -311,6 +317,7 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 			ve = vf->addElement(_vertexTexCoordSemanticFromTexCoordIndex(t), format, offset, uvArray);
 			_copyVertexUVsToVertexElementArray(importedMesh, t, ve);
 			offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
+			ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 		}
 	}
 
@@ -320,6 +327,7 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 		ve = vf->addElement(Vertex_Tangent, format, offset, tangetsArray);
 		_copyVertexTangentsToVertexElementArray(importedMesh, ve);
 		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
+		ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 
 		//		void* bitangetsArray = _allocateArrayForElement(mesh->mNumVertices, VertexFormat_FLOAT3);
 		//		vf->addElement(Vertex_Tangent, VertexFormat_FLOAT3, offset, bitangetsArray);
@@ -356,7 +364,7 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 		mesh->setMaterial(MaterialPtr(materials[importedMesh->mMaterialIndex]));
 	}
 
-	//TODO: Stupid assimp assigns nonlogical uvIndex values (e.g. 32 instead of 0, for the 1st uvIndex)
+	//TODO: Stupid assimp assigns illogical uvIndex values (e.g. 32 instead of 0, for the 1st uvIndex)
 	if (mesh->getMaterial()) {
 		uint32_t uvIndices[AI_MAX_NUMBER_OF_TEXTURECOORDS];
 		for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; uv++) {
@@ -370,7 +378,7 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 		for (uint32_t input = 0; input < MAX_TEXTURES_STACK; input++) {
 			for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; uv++) {
 				if (mesh->getMaterial()->m_textures->texInputs[input].uvSet == uvIndices[uv]) {
-					std::cout << "adjusting input  " << input << " to uv set " << uv << std::endl;
+//					std::cout << "adjusting input  " << input << " to uv set " << uv << std::endl;
 					mesh->getMaterial()->m_textures->texInputs[input].uvSet = uv;
 					break;
 				}
@@ -549,6 +557,7 @@ Mesh* MeshFactory::createQuad() {
 	fData[9] = -1.0f;
 	fData[10] = 1.0f;
 	fData[11] = 0.0f;
+	ve->m_vbo->setData(ve->m_data, 4);
 
 	// add vertex normals
 	void* normalArray = _allocateArrayForElement(4, VertexFormat_FLOAT3);
@@ -574,6 +583,7 @@ Mesh* MeshFactory::createQuad() {
 	fData[10] = 0.0f;
 	fData[11] = 1.0f;
 
+	ve->m_vbo->setData(ve->m_data, 4);
 	offset += 4 * VertexElement::getFormatSize(VertexFormat_FLOAT3);
 
 	// add vertex colors
@@ -604,6 +614,8 @@ Mesh* MeshFactory::createQuad() {
 	fData[13] = 1.0f;
 	fData[14] = 1.0f;
 	fData[15] = 1.0f;
+
+	ve->m_vbo->setData(ve->m_data, 4);
 	offset += 4 * VertexElement::getFormatSize(VertexFormat_FLOAT4);
 
 	// add texture coordinates
@@ -625,6 +637,8 @@ Mesh* MeshFactory::createQuad() {
 	// V3
 	fData[6] = 0.0f;
 	fData[7] = 1.0f;
+
+	ve->m_vbo->setData(ve->m_data, 4);
 
 	IndexArrayPtr indices(new uint32_t[6]);
 	uint32_t* p = indices.get();

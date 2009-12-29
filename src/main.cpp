@@ -11,11 +11,14 @@
 #include "ILTextureManager.h"
 #include "RenderablesRasterizer.h"
 #include "MeshFactory.h"
+#include "GLXTimer.h"
 
 #define ILUT_USE_OPENGL
 #include <IL/il.h>
 #include <IL/ilu.h>
 #include <IL/ilut.h>
+
+GLXTimer timer;
 
 GLenum g_shadeModel = GL_SMOOTH;
 GLfloat rotZ = 0.0f;
@@ -163,6 +166,7 @@ void loadModels() {
 	MeshFactory mf(&g_matDB, g_texMgr);
 
 	// create multi-material cube
+	std::cout << "creating cube\n";
 	std::list<Mesh*> multiMatMeshes = mf.createFromFile("multitex.obj");
 	multiMat = new Entity();
 	std::list<Mesh*>::iterator it = multiMatMeshes.begin();
@@ -173,6 +177,7 @@ void loadModels() {
 	}
 	Matrix4f& m2 = multiMat->getTransform();
 	m2 = Matrix4f::Translation(2.0f, 5.0f, 5.0f) * m2;
+	std::cout << "done cube\n";
 
 	// create Bob mesh
 	std::list<Mesh*> meshes = mf.createFromFile("data/models/Bob.md5mesh");
@@ -516,13 +521,13 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 	drawTeapots();
 
 	// render Bob
-	//	for (uint32_t i = 0; i < bobEntity->getNumRenderables(); i++) {
-	//		Renderable* r = bobEntity->getRenderable(i);
-	//		r->setTransform(bobEntity->getTransform());
-	//		g_rasterizer->getRenderLayer(0).addRenderable(r);
-	//	}
-	//
-	//	// render billboard
+//	for (uint32_t i = 0; i < bobEntity->getNumRenderables(); i++) {
+//		Renderable* r = bobEntity->getRenderable(i);
+//		r->setTransform(bobEntity->getTransform());
+//		g_rasterizer->getRenderLayer(0).addRenderable(r);
+//	}
+
+	// render billboard
 	Renderable* bb = billboardEntity->getRenderable(0);
 	bb->setTransform(billboardEntity->getTransform());
 	g_rasterizer->getRenderLayer(0).addRenderable(bb);
@@ -541,6 +546,8 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 
 	g_rasterizer->beginFrame(camera);
 	g_rasterizer->endFrame();
+
+	uint32_t elapsed = timer.getMillis();
 }
 
 void rtt(RenderTargetTexture* rt) {
@@ -573,14 +580,14 @@ void rtt(RenderTargetTexture* rt) {
 	drawTeapots();
 
 	// render Bob
-		for (uint32_t i = 0; i < bobEntity->getNumRenderables(); i++) {
-			Renderable* r = bobEntity->getRenderable(i);
-			r->setTransform(bobEntity->getTransform());
-			g_rasterizer->getRenderLayer(0).addRenderable(r);
-		}
+	for (uint32_t i = 0; i < bobEntity->getNumRenderables(); i++) {
+		Renderable* r = bobEntity->getRenderable(i);
+		r->setTransform(bobEntity->getTransform());
+		g_rasterizer->getRenderLayer(0).addRenderable(r);
+	}
 
 	// render billboard
-		g_rasterizer->getRenderLayer(0).addRenderable(billboardEntity->getRenderable(0));
+	g_rasterizer->getRenderLayer(0).addRenderable(billboardEntity->getRenderable(0));
 
 	// render multi-material cube
 	for (uint32_t i = 0; i < multiMat->getNumRenderables(); i++) {

@@ -51,10 +51,46 @@ void Texture::_allocateMipmaps() {
 	uint32_t h = m_height;
 	uint16_t level = 1;
 	while (w > 1 || h > 1) {
-		if (w > 1) w >>= 1;
-		if (h > 1) h >>= 1;
+		if (w > 1)
+			w >>= 1;
+		if (h > 1)
+			h >>= 1;
 		glTexImage2D(GL_TEXTURE_2D, level, m_internalFormat, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 		++level;
+	}
+}
+
+void Texture::fromImage(const Image& img) {
+	m_width = img.m_width;
+	m_sourceWidth = img.m_width;
+	m_height = img.m_height;
+	m_sourceHeight = img.m_height;
+	m_textureTarget = (m_height > 1) ? GL_TEXTURE_2D : GL_TEXTURE_1D;
+	m_internalFormat = _getInternalFormat(img.m_format, img.m_type);
+	m_hasAlpha = (m_internalFormat == GL_RGBA || m_internalFormat == GL_BGRA);
+
+	if (allocate()) {
+		glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+		//TODO: Get pixel store parameters from image
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+		glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+
+		if (m_textureTarget == GL_TEXTURE_1D) {
+			glTexSubImage1D(GL_TEXTURE_1D, 0, 0, m_width, img.m_format, img.m_type, img.m_data);
+		} else if (m_textureTarget == GL_TEXTURE_2D) {
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_width, m_height, img.m_format, img.m_type, img.m_data);
+		} else {
+			// TODO: support more texture types
+		}
+
+		if (m_useMipmaps) {
+			glGenerateMipmap(m_textureTarget);
+		}
+
+		glPopClientAttrib();
 	}
 }
 
@@ -138,3 +174,51 @@ void Texture::configureGLState() {
 	}
 }
 
+GLint Texture::_getInternalFormat(GLenum format, GLenum type) {
+	//TODO: Add more cases
+	switch (format) {
+	case GL_DEPTH_COMPONENT:
+		if (type == GL_FLOAT) {
+			return GL_DEPTH_COMPONENT32F;
+		} else {
+			return GL_DEPTH_COMPONENT;
+		}
+
+	case GL_RGB:
+	case GL_BGR:
+		if (type == GL_FLOAT) {
+			return GL_RGB32F;
+		} else if (type == GL_UNSIGNED_INT) {
+			return GL_RGB32UI;
+		} else if (type == GL_UNSIGNED_INT) {
+			return GL_RGB32I;
+		} else {
+			return GL_RGB;
+		}
+
+	case GL_RGBA:
+	case GL_BGRA:
+		if (type == GL_FLOAT) {
+			return GL_RGBA32F;
+		} else if (type == GL_UNSIGNED_INT) {
+			return GL_RGBA32UI;
+		} else if (type == GL_UNSIGNED_INT) {
+			return GL_RGBA32I;
+		} else {
+			return GL_RGBA;
+		}
+
+	case GL_ALPHA:
+		return GL_ALPHA;
+
+	case GL_LUMINANCE:
+		return GL_LUMINANCE;
+
+	case GL_LUMINANCE_ALPHA:
+		return GL_LUMINANCE_ALPHA;
+
+	default:
+		std::cerr << "mismatch in texture internal format\n";
+		return GL_RGBA;
+	}
+}

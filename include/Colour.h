@@ -6,6 +6,7 @@ class Colour {
 
 public:
 	float r, g, b, a;
+	static Colour WHITE;
 
 public:
 	Colour();

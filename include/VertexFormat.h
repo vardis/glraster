@@ -40,14 +40,21 @@ typedef enum VertexElementFormat {
 	VertexFormat_UBYTE4,
 } VertexElementFormat;
 
-struct VertexElement {
-	VertexElement() :
-		m_semantic(Vertex_Pos), m_format(VertexFormat_FLOAT3), m_size(0), m_offset(0), m_data(0), m_vboID(0) {
-	}
-	VertexElement(VertexElementSemantic semantic, VertexElementFormat format, uint32_t offset, void* data) :
-		m_semantic(semantic), m_format(format), m_size(getFormatSize(format)), m_offset(offset), m_data(data), m_vboID(
-				0) {
+#include "VertexElementBuffer.h"
 
+typedef struct VertexElement {
+
+	VertexElementSemantic m_semantic;
+	VertexElementFormat m_format;
+	uint16_t m_size;
+	uint32_t m_offset;
+	void* m_data;
+//	GLuint m_vboID;
+	VertexElementBufferPtr m_vbo;
+
+	VertexElement(VertexElementSemantic semantic, VertexElementFormat format, uint32_t offset, void* data) :
+		m_semantic(semantic), m_format(format), m_size(getFormatSize(format)), m_offset(offset), m_data(data), m_vbo() {
+		m_vbo = VertexElementBufferPtr(new VertexElementBuffer(this));
 	}
 	static uint8_t getFormatSize(VertexElementFormat format) {
 		switch (format) {
@@ -118,13 +125,8 @@ struct VertexElement {
 			return 0;
 		}
 	}
-	VertexElementSemantic m_semantic;
-	VertexElementFormat m_format;
-	uint16_t m_size;
-	uint32_t m_offset;
-	void* m_data;
-	GLuint m_vboID;
-};
+
+} VertexElement;
 typedef shared_ptr<VertexElement> VertexElementPtr;
 
 class VertexFormat {

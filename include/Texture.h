@@ -88,26 +88,30 @@ enum TexFilter {
 	TexFilter_Anisotropic
 };
 
+#include "Image.h"
+
 class Texture {
 
 public:
-	String m_filename;
-	bool   m_allocated;
-	uint32_t m_width, m_height;
-	uint32_t m_sourceWidth, m_sourceHeight;
-	GLuint m_texID;
-	GLenum m_textureTarget;
-	GLuint m_internalFormat;
-	bool m_useMipmaps;
-	bool m_hasAlpha;
-	TexFilter m_minFilter;
-	TexFilter m_magFilter;
+	String      m_filename;
+	bool        m_allocated;
+	uint32_t    m_width, m_height;
+	uint32_t    m_sourceWidth, m_sourceHeight;
+	GLuint      m_texID;
+	GLenum      m_textureTarget;
+	GLuint      m_internalFormat;
+	bool        m_useMipmaps;
+	bool        m_hasAlpha;
+	TexFilter   m_minFilter;
+	TexFilter   m_magFilter;
 	TexWrapMode m_wrapping;
-	float m_anisotropy;
+	float       m_anisotropy;
 
 public:
 	Texture();
 	~Texture();
+
+	void fromImage(const Image& img);
 
 	/** Allocates graphics resources */
 	bool allocate();
@@ -116,6 +120,7 @@ public:
 
 private:
 	void _allocateMipmaps();
+	GLint _getInternalFormat(GLenum format, GLenum type);
 };
 typedef struct Texture Texture;
 typedef shared_ptr<Texture> TexturePtr;
