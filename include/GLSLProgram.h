@@ -43,6 +43,8 @@ public:
 		return m_compiled;
 	}
 
+	// Linking is applied as a separate operation from compilation in order to allow for transform feedback
+	// which is specified after compilation but before linking
 	bool link();
 	bool isLinked() const {
 		return m_linked;

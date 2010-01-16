@@ -9,6 +9,7 @@
 #define IMAGE_H_
 
 
+//TODO !!IMPORTANT!!: add getPitch and getBpp methods
 class Image {
 public:
 	uint32_t m_width;
@@ -28,6 +29,7 @@ public:
 	// frees previously allocate resources and allocates new resources based on the new image settings
 	void allocate();
 
+	bool saveToFile(const String& filename);
 };
 
 #endif /* IMAGE_H_ */

@@ -3,6 +3,9 @@
 #include "Mesh.h"
 #include "MeshModel.h"
 #include "Billboard.h"
+
+#include "RenderPrimitive.h"
+
 #include "Entity.h"
 #include "Viewport.h"
 #include "RenderTargetTexture.h"
@@ -11,6 +14,8 @@
 #include "ILTextureManager.h"
 #include "RenderablesRasterizer.h"
 #include "MeshFactory.h"
+#include "TTFont.h"
+#include "Text.h"
 #include "GLXTimer.h"
 
 #define ILUT_USE_OPENGL
@@ -54,6 +59,7 @@ unsigned short indices[] = { 0, 1, 2 };
 // Colour data
 GLfloat colours[] = { 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.5f };
 
+long g_lastTime;
 MaterialDB g_matDB;
 Mesh* bobMesh;
 MeshModel* bobModel;
@@ -61,12 +67,16 @@ Entity* bobEntity;
 Entity* billboardEntity;
 Entity* multiMat;
 Entity* planeEntity;
+Entity* quadStripEnt;
 RenderTargetTexture* g_planeTextureRT;
 PinholeCameraPtr g_camera;
 ViewportPtr g_viewport;
 SceneManager scene;
 RenderablesRasterizer* g_rasterizer;
 ILTextureManager* g_texMgr;
+
+TTFont* g_font;
+Text* g_text;
 
 void displayFunc(void);
 void reshapeFunc(int width, int height);
@@ -123,6 +133,8 @@ int main(int argc, char** argv) {
 
 void initialize() {
 
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
 	ilInit();
 	iluInit();
 	ilutInit();
@@ -155,16 +167,24 @@ void initialize() {
 	//	scene.setActiveSkyMapType(Sky_CubeMap);
 	//	scene.setCubeSkyMap("stevecube.jpg");
 
-	loadModels();
-	//	loadAllTextures();
-	//	createVertexBuffers();
+	g_font = new TTFont();
+	g_font->setFilename("bluebold.ttf");
+	g_font->addCodepointRange(CodepointRange(32, 166));
+	g_font->setPointSize(3);
+	g_font->setHres(800);
+	g_font->setVres(600);
+	if (!g_font->create()) {
+		std::cerr << "Error creating font\n";
+	}
 
+	loadModels();
 }
 
 void loadModels() {
 
 	MeshFactory mf(&g_matDB, g_texMgr);
 
+	///////////////////////////////////////////////////////////////////////
 	// create multi-material cube
 	std::cout << "creating cube\n";
 	std::list<Mesh*> multiMatMeshes = mf.createFromFile("multitex.obj");
@@ -178,7 +198,9 @@ void loadModels() {
 	Matrix4f& m2 = multiMat->getTransform();
 	m2 = Matrix4f::Translation(2.0f, 5.0f, 5.0f) * m2;
 	std::cout << "done cube\n";
+	///////////////////////////////////////////////////////////////////////
 
+	///////////////////////////////////////////////////////////////////////
 	// create Bob mesh
 	std::list<Mesh*> meshes = mf.createFromFile("data/models/Bob.md5mesh");
 	bobEntity = new Entity();
@@ -190,13 +212,15 @@ void loadModels() {
 	}
 	Matrix4f& m = bobEntity->getTransform();
 	m = Matrix4f::Scale(0.1f, 0.1f, 0.1f) * m;
+	///////////////////////////////////////////////////////////////////////
 
+	///////////////////////////////////////////////////////////////////////
 	// create billboard of vegetation
 	MaterialPtr billboardMat(new Material());
 	billboardMat->m_name = "billboardMat";
 	billboardMat->m_twoSided = true;
 	billboardMat->m_diffuse.set(1.0f);
-//	billboardMat->m_fragmentShader = "fs.glsl";
+	//	billboardMat->m_fragmentShader = "fs.glsl";
 	billboardMat->m_textures = TextureStackPtr(new TextureStack());
 
 	Texture* tex = new Texture();
@@ -211,7 +235,47 @@ void loadModels() {
 	bb->setMaterial(billboardMat);
 	billboardEntity = new Entity();
 	billboardEntity->addRenderable(bb);
+	///////////////////////////////////////////////////////////////////////
 
+	///////////////////////////////////////////////////////////////////////
+	// QuadStrip
+	VertexFormat vf;
+	vf.addElement(Vertex_Pos, VertexFormat_FLOAT3);
+	vf.addElement(Vertex_Normal, VertexFormat_FLOAT3);
+	vf.addElement(Vertex_TexCoord0, VertexFormat_FLOAT2);
+
+	RenderPrimitive<QuadStripPrimitiveType>* qs = new RenderPrimitive<QuadStripPrimitiveType> ();
+	qs->setMaterial(billboardMat);
+	qs->specifyVertexFormat(vf);
+	qs->beginGeometry(3);
+
+	float quads_pos[] = { -1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+							1.0f, -1.0f, 0.0f, 2.0f, 1.0f, 0.0f, 2.0f, -1.0f, 0.0f };
+	qs->vertexAttribArray(Vertex_Pos, quads_pos);
+
+	float quads_normals[] = { 0.0f, 0.0f, 1.0f };
+	for (int v = 0; v < 8; v++)
+		qs->vertexAttrib(Vertex_Normal, quads_normals);
+
+	float quads_uvs[] = { 0.0f, 1.0f, 0.0f, 0.0f, 0.33f, 1.0f, 0.33f, 0.0f, 0.66f, 1.0f, 0.66f, 0.0f, 1.0f, 1.0f, 1.0f,
+							0.0f };
+
+	qs->vertexAttribArray(Vertex_TexCoord0, quads_uvs);
+
+	if (!qs->endGeometry()) {
+		std::cerr << "error while specifying quad strip geometry\n";
+		exit(0);
+	}
+	quadStripEnt = new Entity();
+	quadStripEnt->addRenderable(qs);
+
+	///////////////////////////////////////////////////////////////////////
+
+	g_text = new Text(g_font);
+	g_text->setPos(10, 10);
+	g_text->setText("hello");
+
+	///////////////////////////////////////////////////////////////////////
 	// create RTT quad
 	MaterialPtr quadMat(new Material());
 	quadMat->m_name = "quadMat";
@@ -237,9 +301,13 @@ void loadModels() {
 	planeEntity->addRenderable(new MeshModel(quad));
 	Matrix4f& planeXform = planeEntity->getTransform();
 	planeXform = Matrix4f::Translation(-2.0f, 2.0f, 5.0f) * planeXform;
+	///////////////////////////////////////////////////////////////////////
 
+	///////////////////////////////////////////////////////////////////////
+	// render target texture
 	g_planeTextureRT = new RenderTargetTexture(TexturePtr(quadTex), true, 0);
 	g_planeTextureRT->allocate();
+	///////////////////////////////////////////////////////////////////////
 
 	/*
 	 Assimp::Importer importer;
@@ -420,20 +488,6 @@ void loadModels() {
 	 */
 }
 
-void loadAllTextures() {
-	for (uint32_t i = 0; i < g_matDB.getNumMaterials(); i++) {
-		MaterialPtr mat = g_matDB.getMaterialById(i);
-		if (mat && mat->m_textures) {
-			for (uint8_t t = 0; t < MAX_TEXTURES_STACK; t++) {
-				if (mat->m_textures->textures[t]) {
-					TexturePtr tex = mat->m_textures->textures[t];
-					g_texMgr->loadTexture(tex->m_filename, tex.get());
-				}
-			}
-		}
-	}
-}
-
 void drawTeapots() {
 
 	glDisable(GL_TEXTURE_2D);
@@ -489,8 +543,25 @@ void displayFunc(void) {
 
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-	rtt(g_planeTextureRT);
+	//	rtt(g_planeTextureRT);
 	render(g_camera, g_viewport);
+
+	long elapsed = timer.getMillis();
+	g_lastTime += elapsed;
+
+	if (g_lastTime > 1000) {
+		std::stringstream ss;
+		ss << "Frame time: " << elapsed << " ms";
+		std::cout << ss.str() << "\n";
+		g_text->setText(ss.str());
+		g_lastTime -= 1000;
+	}
+
+	//	g_text->setText("abcdefghijklmnopqrstuvwxyz");
+	//	g_rasterizer->getRenderLayer(0).addRenderable(g_text);
+
+	g_rasterizer->setRender2D(800, 600);
+	g_rasterizer->render(g_text, g_camera);
 
 	glFlush();
 	glutSwapBuffers();
@@ -515,22 +586,27 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 	glPushMatrix();
 	Vec3f& p = g_camera->getPos();
 	glTranslatef(p.x, p.y, p.z);
-	scene.renderSky();
+	//	scene.renderSky();
 	glPopMatrix();
 
 	drawTeapots();
 
 	// render Bob
-//	for (uint32_t i = 0; i < bobEntity->getNumRenderables(); i++) {
-//		Renderable* r = bobEntity->getRenderable(i);
-//		r->setTransform(bobEntity->getTransform());
-//		g_rasterizer->getRenderLayer(0).addRenderable(r);
-//	}
+	//	for (uint32_t i = 0; i < bobEntity->getNumRenderables(); i++) {
+	//		Renderable* r = bobEntity->getRenderable(i);
+	//		r->setTransform(bobEntity->getTransform());
+	//		g_rasterizer->getRenderLayer(0).addRenderable(r);
+	//	}
 
 	// render billboard
-	Renderable* bb = billboardEntity->getRenderable(0);
-	bb->setTransform(billboardEntity->getTransform());
-	g_rasterizer->getRenderLayer(0).addRenderable(bb);
+	//	Renderable* bb = billboardEntity->getRenderable(0);
+	//	bb->setTransform(billboardEntity->getTransform());
+	//	g_rasterizer->getRenderLayer(0).addRenderable(bb);
+
+	// render quad strip
+	//	Renderable* qs = quadStripEnt->getRenderable(0);
+	//	qs->setTransform(quadStripEnt->getTransform());
+	//	g_rasterizer->getRenderLayer(0).addRenderable(qs);
 
 	// render multi-material cube
 	for (uint32_t i = 0; i < multiMat->getNumRenderables(); i++) {
@@ -546,8 +622,6 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 
 	g_rasterizer->beginFrame(camera);
 	g_rasterizer->endFrame();
-
-	uint32_t elapsed = timer.getMillis();
 }
 
 void rtt(RenderTargetTexture* rt) {

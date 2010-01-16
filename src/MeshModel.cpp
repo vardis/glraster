@@ -37,9 +37,9 @@ void MeshModel::renderGeometry() {
 				glActiveTexture(GL_TEXTURE0 + i);
 				glClientActiveTexture(GL_TEXTURE0 + i);
 
-				VertexElement* ve = vf->getElementBySemantic((VertexElementSemantic) (Vertex_TexCoord0
-						+ mat->m_textures->texInputs[i].uvSet));
-				ve->m_vbo->uploadData();
+//				VertexElement* ve = vf->getElementBySemantic((VertexElementSemantic) (Vertex_TexCoord0
+//						+ mat->m_textures->texInputs[i].uvSet));
+//				ve->m_vbo->uploadData();
 			}
 		}
 	}
@@ -58,30 +58,31 @@ void MeshModel::_updateBounds() {
 	float x, y, z;
 	float* fData;
 	short* sData;
+	void* data = ve->m_vbo->mapData();
 	for (uint32_t i = 0; i < m_mesh->getNumVertices(); i++) {
 		fData = 0;
 		sData = 0;
 		switch (ve->m_format) {
 		case VertexFormat_SHORT2:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			x = sData[i * formatSize];
 			y = sData[i * formatSize + 1];
 			z = 0.0f;
 			break;
 		case VertexFormat_SHORT3:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			x = sData[i * formatSize];
 			y = sData[i * formatSize + 1];
 			z = sData[i * formatSize + 2];
 			break;
 		case VertexFormat_FLOAT2:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			x = fData[i * formatSize];
 			y = fData[i * formatSize + 1];
 			z = 0.0f;
 			break;
 		case VertexFormat_FLOAT3:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			x = fData[i * formatSize];
 			y = fData[i * formatSize + 1];
 			z = fData[i * formatSize + 2];
@@ -93,4 +94,5 @@ void MeshModel::_updateBounds() {
 		}
 		m_bounds.addPoint(x, y, z);
 	}
+	ve->m_vbo->unmapData();
 }

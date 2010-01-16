@@ -41,6 +41,7 @@
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.943144499" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
 <option id="gnu.cpp.link.option.libs.1422860953" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="GLU"/>
+<listOptionValue builtIn="false" value="rt"/>
 <listOptionValue builtIn="false" value="freetype"/>
 <listOptionValue builtIn="false" value="m"/>
 <listOptionValue builtIn="false" value="glut"/>
@@ -192,6 +193,7 @@
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.1629581635" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release">
 <option id="gnu.cpp.link.option.libs.1096703587" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="GLU"/>
+<listOptionValue builtIn="false" value="rt"/>
 <listOptionValue builtIn="false" value="freetype"/>
 <listOptionValue builtIn="false" value="m"/>
 <listOptionValue builtIn="false" value="glut"/>

@@ -13,7 +13,7 @@ public:
 	Vec2() {
 	}
 
-        Vec2(T _v) :
+	Vec2(T _v) :
 		x(_v), y(_v) {
 	}
 
@@ -112,10 +112,9 @@ public:
 	}
 };
 
-typedef Vec2<int>    Vec2i;
-typedef Vec2<float>  Vec2f;
+typedef Vec2<int> Vec2i;
+typedef Vec2<float> Vec2f;
 typedef Vec2<double> Vec2d;
-
 
 #ifdef USE_EXPORT_KEYWORD
 export
@@ -126,7 +125,9 @@ class Vec3 {
 public:
 	T x, y, z;
 
-        Vec3() {
+	static Vec3<T> Front;
+
+	Vec3() {
 	}
 
 	Vec3(T _v) :
@@ -189,9 +190,9 @@ public:
 		T len = this->length();
 		if (len > 0.000001) {
 			T rl = 1.0 / len;
-			return Vec3<T>(x * rl, y * rl, z * rl);
+			return Vec3<T> (x * rl, y * rl, z * rl);
 		} else {
-			return Vec3<T>();
+			return Vec3<T> ();
 		}
 	}
 
@@ -203,15 +204,15 @@ public:
 	}
 
 	Vec3<T> operator+(const Vec3<T>& _v) const {
-		return Vec3<T>(x + _v.x, y + _v.y, z + _v.z);
+		return Vec3<T> (x + _v.x, y + _v.y, z + _v.z);
 	}
 
 	Vec3<T> operator-() const {
-		return Vec3<T>(-x, -y, -z);
+		return Vec3<T> (-x, -y, -z);
 	}
 
 	Vec3<T> operator-(const Vec3<T>& _v) const {
-		return Vec3<T>(x - _v.x, y - _v.y, z - _v.z);
+		return Vec3<T> (x - _v.x, y - _v.y, z - _v.z);
 	}
 
 	void operator+=(const Vec3<T>& _v) {
@@ -227,11 +228,11 @@ public:
 	}
 
 	Vec3<T> operator*(const Vec3<T>& _v) const {
-		return Vec3<T>(x * _v.x, y * _v.y, z * _v.z);
+		return Vec3<T> (x * _v.x, y * _v.y, z * _v.z);
 	}
 
 	Vec3<T> operator*(T _factor) const {
-		return Vec3<T>(x * _factor, y * _factor, z * _factor);
+		return Vec3<T> (x * _factor, y * _factor, z * _factor);
 	}
 
 	Vec3<T> operator*=(T _factor) {
@@ -252,8 +253,7 @@ public:
 	}
 
 	Vec3<T> cross(const Vec3<T>& _v) const {
-		return Vec3<T> ((y * _v.z) - (z * _v.y), (z * _v.x) - (x * _v.z), (x
-				* _v.y) - (y * _v.x));
+		return Vec3<T> ((y * _v.z) - (z * _v.y), (z * _v.x) - (x * _v.z), (x * _v.y) - (y * _v.x));
 	}
 
 	template<typename U>
@@ -266,8 +266,8 @@ public:
 	friend Vec3<U> operator*(int _r, const Vec3<U>& _v);
 };
 
-typedef Vec3<float>    Vec3f;
-typedef Vec3<double>   Vec3d;
+typedef Vec3<float> Vec3f;
+typedef Vec3<double> Vec3d;
 typedef Vec3<uint32_t> Vec3ui;
 
 #endif /*VECTOR_H_*/

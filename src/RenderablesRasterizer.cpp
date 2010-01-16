@@ -20,7 +20,6 @@ RenderablesRasterizer::RenderablesRasterizer(ITextureManager* texMgr, MaterialDB
 RenderablesRasterizer::~RenderablesRasterizer() {
 }
 
-
 void RenderablesRasterizer::beginFrame(PinholeCameraPtr cam) {
 	for (uint8_t i = 0; i < MAX_RENDER_LAYERS; i++) {
 		RenderablesList sorted = m_layers[i].depthSort();
@@ -42,26 +41,32 @@ void RenderablesRasterizer::endFrame() {
 void RenderablesRasterizer::render(Renderable* r, PinholeCameraPtr cam, uint16_t materialOverride) {
 
 	// setup viewing state
+	r->preViewTransform(cam);
+
 	const Matrix4f& tr = r->getTransform();
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glMultTransposeMatrixf(&tr.m[0][0]);
 	r->postViewTransform(cam);
 
+	r->preRender();
+
 	// setup material state
 	glEnable(GL_COLOR_MATERIAL);
 
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-//	if (materialOverride == NULL_MATERIAL_INDEX) {
-//		_applyMaterial(r->getMaterialIndex());
-//	} else {
+	//	if (materialOverride == NULL_MATERIAL_INDEX) {
+	//		_applyMaterial(r->getMaterialIndex());
+	//	} else {
 	MaterialPtr mat = r->getMaterial();
 	if (mat) {
 		mat->applyGLState();
 	}
-//	}
+	//	}
 	r->renderGeometry();
+
+	r->postRender();
 
 	// restore material state
 	glDisable(GL_COLOR_MATERIAL);
@@ -71,4 +76,14 @@ void RenderablesRasterizer::render(Renderable* r, PinholeCameraPtr cam, uint16_t
 	glPopMatrix();
 
 	glUseProgram(0);
+}
+
+void RenderablesRasterizer::setRender2D(uint width, uint height) {
+	glDisable(GL_DEPTH_TEST);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0, width, 0, height);
 }

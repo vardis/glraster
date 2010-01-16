@@ -10,7 +10,7 @@
 
 class ITimeSource {
 public:
-	virtual uint32_t getMillis() = 0;
+	virtual long getMillis() = 0;
 };
 
 #endif /* ITIMESOURCE_H_ */

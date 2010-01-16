@@ -36,6 +36,10 @@ public:
 	RenderLayer& getRenderLayer(uint8_t i) {
 		return m_layers[i];
 	}
+
+//	void setRenderTarget(RenderTarget rt);
+
+	void setRender2D(uint width, uint height);
 };
 
 #endif /* RENDERABLESRASTERIZER_H_ */

@@ -16,6 +16,10 @@ public:
 	uint32_t m_numIndices;
 	GLenum   m_usageHint;
 
+private:
+	bool     m_isMapped;
+
+
 public:
 	VertexIndexBuffer(GLenum primitiveType);
 	virtual ~VertexIndexBuffer();
@@ -33,7 +37,8 @@ public:
 
 	void drawPrimitives(uint16_t numInstances = 1);
 
-	uint32_t* mapData(GLenum accessType, uint32_t offset, uint32_t length);
+	uint32_t* mapData(GLenum accessType = GL_READ_WRITE);
+	uint32_t* mapSubData(GLbitfield accessType = GL_MAP_WRITE_BIT, uint32_t offset = 0, uint32_t count = 0);
 	void unmapData();
 };
 typedef shared_ptr<VertexIndexBuffer> VertexIndexBufferPtr;

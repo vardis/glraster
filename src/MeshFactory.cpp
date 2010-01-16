@@ -20,28 +20,6 @@ MeshFactory::MeshFactory(MaterialDB* matDB, ITextureManager* texMgr) :
 MeshFactory::~MeshFactory() {
 }
 
-void* _allocateArrayForElement(uint32_t count, VertexElementFormat format) {
-	switch (format) {
-	case VertexFormat_FLOAT1:
-	case VertexFormat_FLOAT2:
-	case VertexFormat_FLOAT3:
-	case VertexFormat_FLOAT4:
-		return new float[count * VertexElement::getFormatElementCount(format)];
-
-	case VertexFormat_SHORT1:
-	case VertexFormat_SHORT2:
-	case VertexFormat_SHORT3:
-	case VertexFormat_SHORT4:
-		return new short[count * VertexElement::getFormatElementCount(format)];
-
-	case VertexFormat_UBYTE3:
-	case VertexFormat_UBYTE4:
-		return new uint8_t[count * VertexElement::getFormatElementCount(format)];
-	default:
-		return 0;
-	}
-}
-
 VertexElementSemantic MeshFactory::_vertexTexCoordSemanticFromTexCoordIndex(uint8_t texIndex) {
 	switch (texIndex) {
 	case 0:
@@ -69,6 +47,7 @@ void MeshFactory::_copyVertexPosToVertexElementArray(aiMesh* mesh, VertexElement
 	float* fData;
 	short* sData;
 	uint8_t* bData;
+	void* data = ve->m_vbo->mapData();
 	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
@@ -77,23 +56,23 @@ void MeshFactory::_copyVertexPosToVertexElementArray(aiMesh* mesh, VertexElement
 		switch (ve->m_format) {
 		case VertexFormat_FLOAT1:
 		case VertexFormat_FLOAT2:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mVertices[i].x;
 			fData[i * elementCount + 1] = mesh->mVertices[i].y;
 			break;
 		case VertexFormat_FLOAT3:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mVertices[i].x;
 			fData[i * elementCount + 1] = mesh->mVertices[i].y;
 			fData[i * elementCount + 2] = mesh->mVertices[i].z;
 			break;
 		case VertexFormat_SHORT2:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mVertices[i].x;
 			sData[i * elementCount + 1] = mesh->mVertices[i].y;
 			break;
 		case VertexFormat_SHORT3:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mVertices[i].x;
 			sData[i * elementCount + 1] = mesh->mVertices[i].y;
 			sData[i * elementCount + 2] = mesh->mVertices[i].z;
@@ -102,24 +81,26 @@ void MeshFactory::_copyVertexPosToVertexElementArray(aiMesh* mesh, VertexElement
 			break;
 		}
 	}
+	ve->m_vbo->unmapData();
 }
 
 void MeshFactory::_copyVertexNormalsToVertexElementArray(aiMesh* mesh, VertexElement* ve) {
 	float* fData;
 	short* sData;
+	void* data = ve->m_vbo->mapData();
 	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
 		sData = 0;
 		switch (ve->m_format) {
 		case VertexFormat_FLOAT3:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mNormals[i].x;
 			fData[i * elementCount + 1] = mesh->mNormals[i].y;
 			fData[i * elementCount + 2] = mesh->mNormals[i].z;
 			break;
 		case VertexFormat_SHORT3:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mNormals[i].x;
 			sData[i * elementCount + 1] = mesh->mNormals[i].y;
 			sData[i * elementCount + 2] = mesh->mNormals[i].z;
@@ -128,24 +109,26 @@ void MeshFactory::_copyVertexNormalsToVertexElementArray(aiMesh* mesh, VertexEle
 			break;
 		}
 	}
+	ve->m_vbo->unmapData();
 }
 
 void MeshFactory::_copyVertexTangentsToVertexElementArray(aiMesh* mesh, VertexElement* ve) {
 	float* fData;
 	short* sData;
+	void* data = ve->m_vbo->mapData();
 	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
 		sData = 0;
 		switch (ve->m_format) {
 		case VertexFormat_FLOAT3:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mTangents[i].x;
 			fData[i * elementCount + 1] = mesh->mTangents[i].y;
 			fData[i * elementCount + 2] = mesh->mTangents[i].z;
 			break;
 		case VertexFormat_SHORT3:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mTangents[i].x;
 			sData[i * elementCount + 1] = mesh->mTangents[i].y;
 			sData[i * elementCount + 2] = mesh->mTangents[i].z;
@@ -154,42 +137,44 @@ void MeshFactory::_copyVertexTangentsToVertexElementArray(aiMesh* mesh, VertexEl
 			break;
 		}
 	}
+	ve->m_vbo->unmapData();
 }
 
 void MeshFactory::_copyVertexUVsToVertexElementArray(aiMesh* mesh, uint8_t uvSet, VertexElement* ve) {
 	float* fData;
 	short* sData;
+	void* data = ve->m_vbo->mapData();
 	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
 		sData = 0;
 		switch (ve->m_format) {
 		case VertexFormat_FLOAT1:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mTextureCoords[uvSet][i].x;
 			break;
 		case VertexFormat_FLOAT2:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mTextureCoords[uvSet][i].x;
 			fData[i * elementCount + 1] = mesh->mTextureCoords[uvSet][i].y;
 			break;
 		case VertexFormat_FLOAT3:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mTextureCoords[uvSet][i].x;
 			fData[i * elementCount + 1] = mesh->mTextureCoords[uvSet][i].y;
 			fData[i * elementCount + 2] = mesh->mTextureCoords[uvSet][i].z;
 			break;
 		case VertexFormat_SHORT1:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mTextureCoords[uvSet][i].x;
 			break;
 		case VertexFormat_SHORT2:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mTextureCoords[uvSet][i].x;
 			sData[i * elementCount + 1] = mesh->mTextureCoords[uvSet][i].y;
 			break;
 		case VertexFormat_SHORT3:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mTextureCoords[uvSet][i].x;
 			sData[i * elementCount + 1] = mesh->mTextureCoords[uvSet][i].y;
 			sData[i * elementCount + 2] = mesh->mTextureCoords[uvSet][i].z;
@@ -198,12 +183,14 @@ void MeshFactory::_copyVertexUVsToVertexElementArray(aiMesh* mesh, uint8_t uvSet
 			break;
 		}
 	}
+	ve->m_vbo->unmapData();
 }
 
 void MeshFactory::_copyVertexColorsToVertexElementArray(aiMesh* mesh, VertexElement* ve) {
 	float* fData;
 	short* sData;
 	uint8_t* bData;
+	void* data = ve->m_vbo->mapData();
 	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
@@ -211,39 +198,39 @@ void MeshFactory::_copyVertexColorsToVertexElementArray(aiMesh* mesh, VertexElem
 		bData = 0;
 		switch (ve->m_format) {
 		case VertexFormat_FLOAT3:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mColors[0][i].r;
 			fData[i * elementCount + 1] = mesh->mColors[0][i].g;
 			fData[i * elementCount + 2] = mesh->mColors[0][i].b;
 			break;
 		case VertexFormat_FLOAT4:
-			fData = reinterpret_cast<float*> (ve->m_data);
+			fData = reinterpret_cast<float*> (data);
 			fData[i * elementCount] = mesh->mColors[0][i].r;
 			fData[i * elementCount + 1] = mesh->mColors[0][i].g;
 			fData[i * elementCount + 2] = mesh->mColors[0][i].b;
 			fData[i * elementCount + 3] = mesh->mColors[0][i].a;
 			break;
 		case VertexFormat_SHORT3:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mColors[0][i].r;
 			sData[i * elementCount + 1] = mesh->mColors[0][i].g;
 			sData[i * elementCount + 2] = mesh->mColors[0][i].b;
 			break;
 		case VertexFormat_SHORT4:
-			sData = reinterpret_cast<short*> (ve->m_data);
+			sData = reinterpret_cast<short*> (data);
 			sData[i * elementCount] = mesh->mColors[0][i].r;
 			sData[i * elementCount + 1] = mesh->mColors[0][i].g;
 			sData[i * elementCount + 2] = mesh->mColors[0][i].b;
 			sData[i * elementCount + 3] = mesh->mColors[0][i].a;
 			break;
 		case VertexFormat_UBYTE3:
-			bData = reinterpret_cast<uint8_t*> (ve->m_data);
+			bData = reinterpret_cast<uint8_t*> (data);
 			bData[i * elementCount] = mesh->mColors[0][i].r;
 			bData[i * elementCount + 1] = mesh->mColors[0][i].g;
 			bData[i * elementCount + 2] = mesh->mColors[0][i].b;
 			break;
 		case VertexFormat_UBYTE4:
-			bData = reinterpret_cast<uint8_t*> (ve->m_data);
+			bData = reinterpret_cast<uint8_t*> (data);
 			bData[i * elementCount] = mesh->mColors[0][i].r;
 			bData[i * elementCount + 1] = mesh->mColors[0][i].g;
 			bData[i * elementCount + 2] = mesh->mColors[0][i].b;
@@ -253,6 +240,7 @@ void MeshFactory::_copyVertexColorsToVertexElementArray(aiMesh* mesh, VertexElem
 			break;
 		}
 	}
+	ve->m_vbo->unmapData();
 }
 
 Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> materials) {
@@ -269,31 +257,31 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 	VertexFormat* vf = new VertexFormat();
 	size_t formatSize = VertexElement::getFormatSize(format);
 
-	void* posData = _allocateArrayForElement(importedMesh->mNumVertices, format);
-	VertexElement* ve = vf->addElement(Vertex_Pos, format, 0, posData);
+//	void* posData = _allocateArrayForElement(importedMesh->mNumVertices, format);
+	VertexElement* ve = vf->addElement(Vertex_Pos, format, 0, 0);
+	ve->m_vbo->allocate(importedMesh->mNumVertices);
 	offset += importedMesh->mNumVertices * formatSize;
 	_copyVertexPosToVertexElementArray(importedMesh, ve);
-	ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 
 	//TODO: ve->data can now be deallocated
 
 	// Vertex_Normal vertex element, optional
 	if (importedMesh->HasNormals()) {
 		format = VertexFormat_FLOAT3;
-		void* normalArray = _allocateArrayForElement(importedMesh->mNumVertices, format);
-		ve = vf->addElement(Vertex_Normal, format, offset, normalArray);
+		ve = vf->addElement(Vertex_Normal, format, offset, 0);
+//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
+		ve->m_vbo->allocate(importedMesh->mNumVertices);
 		_copyVertexNormalsToVertexElementArray(importedMesh, ve);
 		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
-		ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 	}
 
 	if (importedMesh->HasVertexColors(0)) {
 		format = VertexFormat_FLOAT4;
-		void* colorArray = _allocateArrayForElement(importedMesh->mNumVertices, format);
-		ve = vf->addElement(Vertex_Color, VertexFormat_FLOAT4, offset, colorArray);
+		ve = vf->addElement(Vertex_Color, VertexFormat_FLOAT4, offset, 0);
+//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
+		ve->m_vbo->allocate(importedMesh->mNumVertices);
 		_copyVertexColorsToVertexElementArray(importedMesh, ve);
 		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
-		ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 	}
 
 	for (uint8_t t = 0; t < AI_MAX_NUMBER_OF_TEXTURECOORDS; t++) {
@@ -312,21 +300,21 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 				//TODO: error handling
 				break;
 			}
-			void* uvArray = _allocateArrayForElement(importedMesh->mNumVertices, format);
-			ve = vf->addElement(_vertexTexCoordSemanticFromTexCoordIndex(t), format, offset, uvArray);
+			ve = vf->addElement(_vertexTexCoordSemanticFromTexCoordIndex(t), format, offset, 0);
+//			ve->_allocateArrayForElement(importedMesh->mNumVertices);
+			ve->m_vbo->allocate(importedMesh->mNumVertices);
 			_copyVertexUVsToVertexElementArray(importedMesh, t, ve);
 			offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
-			ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 		}
 	}
 
 	if (importedMesh->HasTangentsAndBitangents()) {
 		format = VertexFormat_FLOAT3;
-		void* tangetsArray = _allocateArrayForElement(importedMesh->mNumVertices, format);
-		ve = vf->addElement(Vertex_Tangent, format, offset, tangetsArray);
+		ve = vf->addElement(Vertex_Tangent, format, offset, 0);
+//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
+		ve->m_vbo->allocate(importedMesh->mNumVertices);
 		_copyVertexTangentsToVertexElementArray(importedMesh, ve);
 		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
-		ve->m_vbo->setData(ve->m_data, importedMesh->mNumVertices);
 
 		//		void* bitangetsArray = _allocateArrayForElement(mesh->mNumVertices, VertexFormat_FLOAT3);
 		//		vf->addElement(Vertex_Tangent, VertexFormat_FLOAT3, offset, bitangetsArray);
@@ -534,9 +522,11 @@ Mesh* MeshFactory::createQuad() {
 	// add vertex positions
 	uint32_t offset = 4 * VertexElement::getFormatSize(VertexFormat_FLOAT3);
 
-	void* posData = _allocateArrayForElement(4, VertexFormat_FLOAT3);
-	VertexElement* ve = vf->addElement(Vertex_Pos, VertexFormat_FLOAT3, 0, posData);
-	float* fData = reinterpret_cast<float*> (ve->m_data);
+	VertexElement* ve = vf->addElement(Vertex_Pos, VertexFormat_FLOAT3, 0, 0);
+//	ve->_allocateArrayForElement(4);
+	ve->m_vbo->allocate(4);
+//	float* fData = reinterpret_cast<float*> (ve->m_data);
+	float* fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
 	// V0
 	fData[0] = -1.0f;
 	fData[1] = -1.0f;
@@ -556,12 +546,15 @@ Mesh* MeshFactory::createQuad() {
 	fData[9] = -1.0f;
 	fData[10] = 1.0f;
 	fData[11] = 0.0f;
-	ve->m_vbo->setData(ve->m_data, 4);
+//	ve->m_vbo->setData(ve->m_data, 4);
+	ve->m_vbo->unmapData();
 
 	// add vertex normals
-	void* normalArray = _allocateArrayForElement(4, VertexFormat_FLOAT3);
-	ve = vf->addElement(Vertex_Normal, VertexFormat_FLOAT3, offset, normalArray);
-	fData = reinterpret_cast<float*> (ve->m_data);
+	ve = vf->addElement(Vertex_Normal, VertexFormat_FLOAT3, offset, 0);
+//	ve->_allocateArrayForElement(4);
+	ve->m_vbo->allocate(4);
+//	fData = reinterpret_cast<float*> (ve->m_data);
+	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
 	// V0
 	fData[0] = 0.0f;
 	fData[1] = 0.0f;
@@ -582,13 +575,16 @@ Mesh* MeshFactory::createQuad() {
 	fData[10] = 0.0f;
 	fData[11] = 1.0f;
 
-	ve->m_vbo->setData(ve->m_data, 4);
+//	ve->m_vbo->setData(ve->m_data, 4);
+	ve->m_vbo->unmapData();
 	offset += 4 * VertexElement::getFormatSize(VertexFormat_FLOAT3);
 
 	// add vertex colors
-	void* colorArray = _allocateArrayForElement(4, VertexFormat_FLOAT4);
-	ve = vf->addElement(Vertex_Color, VertexFormat_FLOAT4, offset, colorArray);
-	fData = reinterpret_cast<float*> (ve->m_data);
+	ve = vf->addElement(Vertex_Color, VertexFormat_FLOAT4, offset, 0);
+//	ve->_allocateArrayForElement(4);
+	ve->m_vbo->allocate(4);
+//	fData = reinterpret_cast<float*> (ve->m_data);
+	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
 
 	// V0
 	fData[0] = 1.0f;
@@ -614,13 +610,16 @@ Mesh* MeshFactory::createQuad() {
 	fData[14] = 1.0f;
 	fData[15] = 1.0f;
 
-	ve->m_vbo->setData(ve->m_data, 4);
+//	ve->m_vbo->setData(ve->m_data, 4);
+	ve->m_vbo->unmapData();
 	offset += 4 * VertexElement::getFormatSize(VertexFormat_FLOAT4);
 
 	// add texture coordinates
-	void* uvArray = _allocateArrayForElement(4, VertexFormat_FLOAT2);
-	ve = vf->addElement(Vertex_TexCoord0, VertexFormat_FLOAT2, offset, uvArray);
-	fData = reinterpret_cast<float*> (ve->m_data);
+	ve = vf->addElement(Vertex_TexCoord0, VertexFormat_FLOAT2, offset, 0);
+//	ve->_allocateArrayForElement(4);
+	ve->m_vbo->allocate(4);
+//	fData = reinterpret_cast<float*> (ve->m_data);
+	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
 	// V0
 	fData[0] = 0.0f;
 	fData[1] = 0.0f;
@@ -637,7 +636,8 @@ Mesh* MeshFactory::createQuad() {
 	fData[6] = 0.0f;
 	fData[7] = 1.0f;
 
-	ve->m_vbo->setData(ve->m_data, 4);
+//	ve->m_vbo->setData(ve->m_data, 4);
+	ve->m_vbo->unmapData();
 
 	IndexArrayPtr indices(new uint32_t[6]);
 	uint32_t* p = indices.get();

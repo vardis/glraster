@@ -130,6 +130,7 @@ void Texture::configureGLState() {
 		} else {
 			// no mipmaps
 			glTexParameteri(m_textureTarget, GL_TEXTURE_MAX_LEVEL, 0);
+
 			switch (m_minFilter) {
 			case TexFilter_Linear:
 				glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

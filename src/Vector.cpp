@@ -2,6 +2,9 @@
 #include "Vector.h"
 
 template<typename T>
+Vec3<T> Vec3<T>::Front(0.0f, 0.0f, 1.0f);
+
+template<typename T>
 Vec3<T> operator*(float _r, const Vec3<T>& _v) {
 	return Vec3<T> (_r * _v.x, _r * _v.y, _r * _v.z);
 }

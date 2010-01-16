@@ -14,13 +14,14 @@
 
 class GLXTimer : public ITimeSource {
 public:
-	struct timeval m_lastTime;
+//	struct timeval m_lastTime;
+	struct timespec m_lastTime;
 
 public:
 	GLXTimer();
 	virtual ~GLXTimer();
 
-	virtual uint32_t getMillis();
+	virtual long getMillis();
 };
 
 #endif /* TARGET_PLATFORM_LINUX */

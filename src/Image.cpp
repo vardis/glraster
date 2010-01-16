@@ -15,6 +15,71 @@
 
 #include "Image.h"
 
+static ILenum _getILTypeFromGLType(GLenum type) {
+	ILenum ilType;
+	switch (type) {
+	case GL_BYTE:
+		ilType = IL_BYTE;
+		break;
+	case GL_UNSIGNED_BYTE:
+		ilType = IL_UNSIGNED_BYTE;
+		break;
+	case GL_INT:
+		ilType = IL_INT;
+		break;
+	case GL_UNSIGNED_INT:
+		ilType = IL_UNSIGNED_INT;
+		break;
+	case GL_SHORT:
+		ilType = IL_SHORT;
+		break;
+	case GL_UNSIGNED_SHORT:
+		ilType = IL_UNSIGNED_SHORT;
+		break;
+	case GL_FLOAT:
+		ilType = IL_FLOAT;
+		break;
+	case GL_DOUBLE:
+		ilType = IL_DOUBLE;
+		break;
+	case GL_HALF_FLOAT:
+		ilType = IL_HALF;
+		break;
+	default:
+		ilType = IL_UNSIGNED_BYTE;
+	}
+	return ilType;
+}
+
+static ILenum _getILFormatFromGLFormat(GLint format) {
+	ILenum ilFmt;
+	switch (format) {
+	case GL_RGBA:
+		ilFmt = IL_RGBA;
+		break;
+	case GL_BGRA:
+		ilFmt = IL_BGRA;
+		break;
+	case GL_LUMINANCE:
+		ilFmt = IL_LUMINANCE;
+		break;
+	case GL_LUMINANCE_ALPHA:
+		ilFmt = IL_LUMINANCE_ALPHA;
+		break;
+	case GL_ALPHA:
+		ilFmt = IL_ALPHA;
+		break;
+	case GL_BGR:
+		ilFmt = IL_BGR;
+		break;
+	case GL_RGB:
+	default:
+		ilFmt = IL_RGB;
+		break;
+	}
+	return ilFmt;
+}
+
 Image::Image() :
 	m_width(800), m_height(600), m_format(GL_RGBA), m_type(GL_UNSIGNED_BYTE), m_pitch(800 * 4), m_data(0) {
 
@@ -33,16 +98,6 @@ Image::~Image() {
 }
 
 Image* Image::load(const String& filename) {
-	ILuint imgId;
-	//	ilGenImages(1, &imgId);
-	//	ilBindImage(imgId);
-	//	if (!ilLoadImage(filename.c_str())) {
-	//		ILenum error = ilGetError();
-	//		if (error != IL_NO_ERROR) {
-	//			std::cerr << "error in ilLoadImage: " << error << std::endl;
-	//		}
-	//		return 0;
-	//	}
 	ilImage il(filename.c_str());
 	if (il.Width() <= 0) {
 		ILenum error = ilGetError();
@@ -53,10 +108,10 @@ Image* Image::load(const String& filename) {
 	}
 
 	Image* img = new Image();
-	img->m_width = il.Width(); // ilGetInteger(IL_IMAGE_WIDTH);
-	img->m_height = il.Height(); //ilGetInteger(IL_IMAGE_HEIGHT);
+	img->m_width = il.Width();
+	img->m_height = il.Height();
 
-	ILenum imgFormat = il.Format(); //ilGetInteger(IL_IMAGE_FORMAT);
+	ILenum imgFormat = il.Format();
 	size_t numComponents = 0;
 	switch (imgFormat) {
 	case IL_RGBA:
@@ -82,7 +137,7 @@ Image* Image::load(const String& filename) {
 		break;
 	}
 
-	ILenum imgType = il.Type(); //ilGetInteger(IL_IMAGE_TYPE);
+	ILenum imgType = il.Type();
 	switch (imgType) {
 	case IL_BYTE:
 		img->m_type = GL_BYTE;
@@ -191,5 +246,13 @@ void Image::allocate() {
 			//TODO: error checking
 			assert(0);
 		}
+		memset(m_data, 0, m_pitch * m_height);
 	}
+}
+
+bool Image::saveToFile(const String& filename) {
+	ilImage il;
+	uint8_t bpp = m_pitch / m_width;
+	il.TexImage(m_width, m_height, 1, bpp, _getILFormatFromGLFormat(m_format), _getILTypeFromGLType(m_type), m_data);
+	return il.Save(filename.data());
 }

@@ -19,10 +19,12 @@
 #include <float.h>
 
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <memory.h>
 #include <algorithm>
 #include <vector>
+#include <map>
 #include <list>
 
 #include <GL/glew.h>
@@ -61,5 +63,7 @@ static uint32_t getClosestPow2(uint32_t i) {
 	++i;
 	return i;
 }
+
+#include "GLException.h"
 
 #endif	/* _GLTUTOR_H */
