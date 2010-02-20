@@ -13,8 +13,8 @@ enum CubeMap_Faces {
 	CubeMap_Face_Back,
 	CubeMap_Face_Left,
 	CubeMap_Face_Right,
-	CubeMap_Face_Up,
-	CubeMap_Face_Down,
+	CubeMap_Face_Top,
+	CubeMap_Face_Bottom,
 };
 
 #include "Texture.h"
@@ -50,8 +50,7 @@ public:
 	}
 
 	virtual GLuint loadTexture(String filename, Texture* tex = 0) = 0;
-	virtual void loadCubeMapTextures(String mapFilename, GLuint* texNames) = 0;
-	virtual void disposeTexture(GLuint texName) = 0;
+	virtual void loadCubeMapTextures(String mapFilename, TexturePtr cubeTextures[6]) = 0;
 };
 
 #endif /* TEXTUREMANAGER_H_ */

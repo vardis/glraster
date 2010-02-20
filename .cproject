@@ -29,7 +29,7 @@
 <listOptionValue builtIn="false" value="/usr/include/freetype2"/>
 <listOptionValue builtIn="false" value="&quot;${workspace_loc:/GLRaster/include}&quot;"/>
 </option>
-<option id="gnu.cpp.compiler.option.other.other.1706315914" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.1706315914" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0  -std=c++0x" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.796295625" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.481324109" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
@@ -41,6 +41,7 @@
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.943144499" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
 <option id="gnu.cpp.link.option.libs.1422860953" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="GLU"/>
+<listOptionValue builtIn="false" value="ctemplate_nothreads"/>
 <listOptionValue builtIn="false" value="rt"/>
 <listOptionValue builtIn="false" value="freetype"/>
 <listOptionValue builtIn="false" value="m"/>
@@ -176,7 +177,7 @@
 <tool command="g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG}${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.337744952" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release">
 <option id="gnu.cpp.compiler.exe.release.option.optimization.level.1862239068" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.exe.release.option.debugging.level.1816241755" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
-<option id="gnu.cpp.compiler.option.other.other.541581213" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 " valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.541581213" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0  -std=c++0x" valueType="string"/>
 <option id="gnu.cpp.compiler.option.include.paths.788430778" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="/home/giorgos/dev/assimp/include"/>
 <listOptionValue builtIn="false" value="/usr/include/freetype2"/>
@@ -193,6 +194,7 @@
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.1629581635" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release">
 <option id="gnu.cpp.link.option.libs.1096703587" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="GLU"/>
+<listOptionValue builtIn="false" value="ctemplate_nothreads"/>
 <listOptionValue builtIn="false" value="rt"/>
 <listOptionValue builtIn="false" value="freetype"/>
 <listOptionValue builtIn="false" value="m"/>

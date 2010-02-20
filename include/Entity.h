@@ -40,7 +40,7 @@ public:
 
 protected:
 	Matrix4f m_transform;
-	std::vector<IRenderablePtr> m_renderables;
+	std::vector<RenderablePtr> m_renderables;
 	AABB<float> m_bounds;
 };
 

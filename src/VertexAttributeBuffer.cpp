@@ -1,5 +1,5 @@
 /*
- * VertexElementBuffer.cpp
+ * VertexAttributeBuffer.cpp
  *
  *  Created on: Dec 26, 2009
  *      Author: giorgos
@@ -7,30 +7,30 @@
 
 #include "GLTutor.h"
 #include "VertexFormat.h"
-#include "VertexElementBuffer.h"
+#include "VertexAttributeBuffer.h"
 
-VertexElementBuffer::VertexElementBuffer(VertexElement* ve) :
+VertexAttributeBuffer::VertexAttributeBuffer(VertexAttribute* ve) :
 	m_vboID(0), m_ve(ve), m_numElements(0), m_usageHint(GL_STATIC_DRAW), m_mapped(0) {
 	glGenBuffers(1, &m_vboID);
 }
 
-VertexElementBuffer::~VertexElementBuffer() {
+VertexAttributeBuffer::~VertexAttributeBuffer() {
 	if (m_vboID && glIsBuffer(m_vboID)) {
 		unmapData();
 		glDeleteBuffers(1, &m_vboID);
 	}
 }
 
-void VertexElementBuffer::setData(void* data, uint32_t numElements) {
+void VertexAttributeBuffer::setData(void* data, uint32_t numElements) {
 	allocate(numElements);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, numElements * VertexElement::getFormatSize(m_ve->m_format), data);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, numElements * VertexAttribute::getFormatSize(m_ve->m_format), data);
 	m_numElements = numElements;
 }
 
-void VertexElementBuffer::updateSubData(uint32_t offset, uint32_t count, void* data) {
+void VertexAttributeBuffer::updateSubData(uint32_t offset, uint32_t count, void* data) {
 	void* mapped = mapSubData(GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT, offset, count);
 	if (mapped) {
-		memcpy(mapped, data, count * VertexElement::getFormatSize(m_ve->m_format));
+		memcpy(mapped, data, count * VertexAttribute::getFormatSize(m_ve->m_format));
 		unmapData();
 	} else {
 		// TODO: error reporting
@@ -38,49 +38,64 @@ void VertexElementBuffer::updateSubData(uint32_t offset, uint32_t count, void* d
 	}
 }
 
-void VertexElementBuffer::allocate(uint32_t numElements) {
+void VertexAttributeBuffer::allocate(uint32_t numElements) {
 	if (numElements != m_numElements) {
 		this->bind();
-		glBufferData(GL_ARRAY_BUFFER, numElements * VertexElement::getFormatSize(m_ve->m_format), 0, m_usageHint);
+		glBufferData(GL_ARRAY_BUFFER, numElements * VertexAttribute::getFormatSize(m_ve->m_format), 0, m_usageHint);
 		m_numElements = numElements;
 	}
 }
 
-void VertexElementBuffer::deallocate() {
+void VertexAttributeBuffer::deallocate() {
 	this->bind();
 	glBufferData(GL_ARRAY_BUFFER, 0, 0, m_usageHint);
 	m_numElements = 0;
 }
 
-void VertexElementBuffer::bind() {
+void VertexAttributeBuffer::bind() {
 	if (m_vboID && glIsBuffer(m_vboID)) {
 		glBindBuffer(GL_ARRAY_BUFFER, m_vboID);
 	}
 }
 
-void VertexElementBuffer::unbind() {
+void VertexAttributeBuffer::unbind() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void VertexElementBuffer::uploadData() {
+#ifdef EXPERIMENTAL_CODE
+void VertexAttributeBuffer::bindAttributeData(GLuint attributeIndex) {
+
+	this->bind();
+	glEnableVertexAttribArray(attributeIndex);
+	glVertexAttribPointer(
+			attributeIndex,
+			VertexAttribute::getFormatElementCount(m_ve->m_format),
+			VertexAttribute::getFormatType(m_ve->m_format),
+			false,
+			0,
+			BUFFER_OFFSET(0));
+}
+#endif
+
+void VertexAttributeBuffer::uploadData() {
 
 	this->bind();
 
 	switch (m_ve->m_semantic) {
 	case Vertex_Pos:
 		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(VertexElement::getFormatElementCount(m_ve->m_format), VertexElement::getFormatType(
+		glVertexPointer(VertexAttribute::getFormatElementCount(m_ve->m_format), VertexAttribute::getFormatType(
 				m_ve->m_format), 0, BUFFER_OFFSET(0));
 		break;
 
 	case Vertex_Color:
 		glEnableClientState(GL_COLOR_ARRAY);
-		glColorPointer(VertexElement::getFormatElementCount(m_ve->m_format), VertexElement::getFormatType(
+		glColorPointer(VertexAttribute::getFormatElementCount(m_ve->m_format), VertexAttribute::getFormatType(
 				m_ve->m_format), 0, BUFFER_OFFSET(0));
 		break;
 	case Vertex_Normal:
 		glEnableClientState(GL_NORMAL_ARRAY);
-		glNormalPointer(VertexElement::getFormatType(m_ve->m_format), 0, BUFFER_OFFSET(0));
+		glNormalPointer(VertexAttribute::getFormatType(m_ve->m_format), 0, BUFFER_OFFSET(0));
 		break;
 	case Vertex_TexCoord0:
 	case Vertex_TexCoord1:
@@ -91,7 +106,7 @@ void VertexElementBuffer::uploadData() {
 	case Vertex_TexCoord6:
 	case Vertex_TexCoord7:
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glTexCoordPointer(VertexElement::getFormatElementCount(m_ve->m_format), VertexElement::getFormatType(
+		glTexCoordPointer(VertexAttribute::getFormatElementCount(m_ve->m_format), VertexAttribute::getFormatType(
 				m_ve->m_format), 0, BUFFER_OFFSET(0));
 	default:
 		//TODO: error reporting
@@ -99,7 +114,7 @@ void VertexElementBuffer::uploadData() {
 	}
 }
 
-void* VertexElementBuffer::mapData(GLenum accessType) {
+void* VertexAttributeBuffer::mapData(GLenum accessType) {
 	assert(!m_mapped);
 
 	if (m_mapped) {
@@ -111,7 +126,7 @@ void* VertexElementBuffer::mapData(GLenum accessType) {
 	return m_mapped;
 }
 
-void* VertexElementBuffer::mapSubData(GLbitfield accessType, uint32_t offset, uint32_t count) {
+void* VertexAttributeBuffer::mapSubData(GLbitfield accessType, uint32_t offset, uint32_t count) {
 	assert(count <= m_numElements && !m_mapped);
 
 	if (m_mapped) {
@@ -120,25 +135,24 @@ void* VertexElementBuffer::mapSubData(GLbitfield accessType, uint32_t offset, ui
 
 	GLenum bitAccess = accessType | GL_MAP_INVALIDATE_RANGE_BIT;
 	this->bind();
-	void* data = 0;
 	if (count == 0) {
 		count = m_numElements;
 		offset = 0;
 	}
 
-	uint32_t buffOffset = offset * VertexElement::getFormatSize(m_ve->m_format);
-	uint32_t buffSize = count * VertexElement::getFormatSize(m_ve->m_format);
+	uint32_t buffOffset = offset * VertexAttribute::getFormatSize(m_ve->m_format);
+	uint32_t buffSize = count * VertexAttribute::getFormatSize(m_ve->m_format);
 	m_mapped = glMapBufferRange(GL_ARRAY_BUFFER, buffOffset, buffSize, bitAccess);
 	return m_mapped;
 }
 
-void VertexElementBuffer::unmapData() {
+void VertexAttributeBuffer::unmapData() {
 	this->bind();
 	glUnmapBuffer(GL_ARRAY_BUFFER);
 	m_mapped = 0;
 }
 
-void VertexElementBuffer::printData() {
+void VertexAttributeBuffer::printData() {
 	using std::cout;
 	bool unmap = false;
 	if (!m_mapped) {
@@ -158,7 +172,7 @@ void VertexElementBuffer::printData() {
 			fp = (float*) m_mapped;
 			fp += i;
 			cout << "f(";
-			for (int i = 0; i < m_ve->getFormatElementCount(m_ve->m_format); i++) {
+			for (int j = 0; j < m_ve->getFormatElementCount(m_ve->m_format); j++) {
 				cout << *fp++ << " ";
 			}
 			cout << ")\n";

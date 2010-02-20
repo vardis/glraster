@@ -10,6 +10,7 @@
 
 #include "PinholeCamera.h"
 #include "Renderable.h"
+#include "Lights.h"
 #include "RenderLayer.h"
 #include "ITextureManager.h"
 #include "ShaderManager.h"
@@ -25,6 +26,7 @@ private:
 	ITextureManager* m_texMgr;
 	MaterialDB*      m_matDB;
 	ShaderManager    m_shaders;
+	std::vector<LightPtr> m_activeLights;
 
 public:
 	RenderablesRasterizer(ITextureManager* texMgr, MaterialDB* matDB);
@@ -38,6 +40,9 @@ public:
 	}
 
 //	void setRenderTarget(RenderTarget rt);
+
+	void addLight(LightPtr l);
+	void clearLights();
 
 	void setRender2D(uint width, uint height);
 };

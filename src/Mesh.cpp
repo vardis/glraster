@@ -3,7 +3,7 @@
 
 Mesh::Mesh() :
 	m_vertexFormat(), m_numVertices(0), m_vertexDataUpdated(false),
-	m_indexDataUpdated(false), m_ibo(), m_material() {
+	m_indexDataUpdated(false), m_ibo(), m_material(), m_bounds() {
 }
 
 Mesh::~Mesh(void) {

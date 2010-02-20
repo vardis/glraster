@@ -23,17 +23,14 @@ ILTextureManager::ILTextureManager() :
 	}
 }
 
-ILTextureManager::~ILTextureManager() {
-}
-
 GLuint ILTextureManager::loadTexture(String filename, Texture* tex) {
-	Image* img = Image::load(filename);
+	ImagePtr img(Image::load(filename));
 	if (!img) {
 		std::cerr << "Error loading texture " << filename << std::endl;
 		return 0;
 	}
 
-	GLenum target = img->m_height > 1 ? GL_TEXTURE_2D : GL_TEXTURE_1D;
+	GLenum target = img->getHeight() > 1 ? GL_TEXTURE_2D : GL_TEXTURE_1D;
 
 	//	ILint origin = ilGetInteger(IL_IMAGE_ORIGIN);
 	//	if (origin != IL_ORIGIN_LOWER_LEFT) {
@@ -43,11 +40,6 @@ GLuint ILTextureManager::loadTexture(String filename, Texture* tex) {
 	if (tex) {
 		tex->m_filename = filename;
 		tex->fromImage(*img);
-
-		if (tex->m_useMipmaps) {
-			gluBuild2DMipmaps(target, img->m_format, img->m_width, img->m_height, img->m_format, img->m_type,
-					img->m_data);
-		}
 		tex->configureGLState();
 
 		// set anisotropy amount
@@ -70,14 +62,17 @@ GLuint ILTextureManager::loadTexture(String filename, Texture* tex) {
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 
 		if (target == GL_TEXTURE_1D) {
-			glTexImage1D(GL_TEXTURE_1D, 0, img->m_format, img->m_width, 0, img->m_format, img->m_type, img->m_data);
+			glTexImage1D(GL_TEXTURE_1D, 0, img->getFormat(), img->getWidth(), 0, img->getFormat(), img->getDataType(),
+					img->getData());
 		} else if (target == GL_TEXTURE_2D) {
-			glTexImage2D(GL_TEXTURE_2D, 0, img->m_format, img->m_width, img->m_height, 0, img->m_format, img->m_type,
-					img->m_data);
+			glTexImage2D(GL_TEXTURE_2D, 0, img->getFormat(), img->getWidth(), img->getHeight(), 0, img->getFormat(),
+					img->getDataType(), img->getData());
 		} else {
 			//TODO: support 3D textures
 		}
-
+		if (!img->isCompressed()) {
+			glGenerateMipmap(target);
+		}
 		// set some defaults
 		glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -89,45 +84,41 @@ GLuint ILTextureManager::loadTexture(String filename, Texture* tex) {
 	}
 }
 
-void ILTextureManager::loadCubeMapTextures(String mapFilename, GLuint* texNames) {
+void ILTextureManager::loadCubeMapTextures(String mapFilename, TexturePtr cubeTextures[6]) {
 	size_t dotPos = mapFilename.rfind('.');
 	if (dotPos >= 0) {
 		String basename = mapFilename.substr(0, dotPos);
 		String ext = mapFilename.substr(dotPos, mapFilename.length() - dotPos);
-		texNames[CubeMap_Face_Front] = loadTexture(basename + "_FR" + ext);
-		glBindTexture(GL_TEXTURE_2D, texNames[CubeMap_Face_Front]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-		texNames[CubeMap_Face_Back] = loadTexture(basename + "_BK" + ext);
-		//		glBindTexture(GL_TEXTURE_2D, texNames[CubeMap_Face_Back]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		TexturePtr frontTex = TexturePtr(new Texture());
+		frontTex->setWrapping(TexWrapMode_ClampEdge);
+		loadTexture(basename + "_FR" + ext, frontTex.get());
+		cubeTextures[CubeMap_Face_Front] = frontTex;
 
-		texNames[CubeMap_Face_Right] = loadTexture(basename + "_RT" + ext);
-		glBindTexture(GL_TEXTURE_2D, texNames[CubeMap_Face_Right]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		TexturePtr backTex = TexturePtr(new Texture());
+		backTex->setWrapping(TexWrapMode_ClampEdge);
+		loadTexture(basename + "_BK" + ext, backTex.get());
+		cubeTextures[CubeMap_Face_Back] = backTex;
 
-		texNames[CubeMap_Face_Left] = loadTexture(basename + "_LF" + ext);
-		glBindTexture(GL_TEXTURE_2D, texNames[CubeMap_Face_Left]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		TexturePtr rightTex = TexturePtr(new Texture());
+		rightTex->setWrapping(TexWrapMode_ClampEdge);
+		loadTexture(basename + "_RT" + ext, rightTex.get());
+		cubeTextures[CubeMap_Face_Right] = rightTex;
 
-		texNames[CubeMap_Face_Up] = loadTexture(basename + "_UP" + ext);
-		glBindTexture(GL_TEXTURE_2D, texNames[CubeMap_Face_Up]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		TexturePtr leftTex = TexturePtr(new Texture());
+		leftTex->setWrapping(TexWrapMode_ClampEdge);
+		loadTexture(basename + "_LF" + ext, leftTex.get());
+		cubeTextures[CubeMap_Face_Left] = leftTex;
 
-		texNames[CubeMap_Face_Down] = loadTexture(basename + "_DN" + ext);
-		glBindTexture(GL_TEXTURE_2D, texNames[CubeMap_Face_Down]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		TexturePtr upTex = TexturePtr(new Texture());
+		upTex->setWrapping(TexWrapMode_ClampEdge);
+		loadTexture(basename + "_UP" + ext, upTex.get());
+		cubeTextures[CubeMap_Face_Top] = upTex;
+
+		TexturePtr bottomTex = TexturePtr(new Texture());
+		bottomTex->setWrapping(TexWrapMode_ClampEdge);
+		loadTexture(basename + "_DN" + ext, bottomTex.get());
+		cubeTextures[CubeMap_Face_Bottom] = bottomTex;
 	}
 }
 
-void ILTextureManager::disposeTexture(GLuint texName) {
-	if (texName) {
-		glDeleteTextures(1, &texName);
-	}
-}

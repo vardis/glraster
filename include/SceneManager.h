@@ -8,7 +8,10 @@
 #ifndef SCENEMANAGER_H_
 #define SCENEMANAGER_H_
 
+#include "Material.h"
 #include "ITextureManager.h"
+#include "MeshModel.h"
+#include "Entity.h"
 
 typedef enum SkyMapType {
 	Sky_None, Sky_SphereMap, Sky_CubeMap
@@ -45,11 +48,14 @@ private:
 protected:
 	ITextureManager* m_texMgr;
 	SkyMapType m_skyMapType;
-	TexturePtr m_sphereSkyTex;
 	GLUquadric* m_sphereSkyQuadric;
 
-	// texture name of the skybox cubemap's textures
-	GLuint m_skyCubemap[6];
+	Material m_sphereSkyMat;
+	Material m_skyboxMat;
+
+	Entity* m_skybox;
+	MeshModelPtr m_sphereSkyModel;
+	MeshModelPtr m_skyboxModels[6];
 };
 
 #endif /* SCENEMANAGER_H_ */

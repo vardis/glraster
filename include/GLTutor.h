@@ -11,6 +11,8 @@
 #define TARGET_PLATFORM_LINUX
 #endif
 
+#include <stdexcept>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/shared_array.hpp>
 
@@ -53,6 +55,9 @@ enum Axis {
 
 #define NULL_MATERIAL_INDEX 0
 
+#define MAX_TEXTURES_STACK 8
+#define MAX_LIGHTS 8
+
 static uint32_t getClosestPow2(uint32_t i) {
 	--i;
 	i |= i >> 16;
@@ -65,5 +70,9 @@ static uint32_t getClosestPow2(uint32_t i) {
 }
 
 #include "GLException.h"
+
+#define SAFE_THROW(x) if (!std::uncaught_exception()) {\
+	throw x;\
+}
 
 #endif	/* _GLTUTOR_H */

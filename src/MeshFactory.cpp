@@ -6,12 +6,13 @@
  */
 
 #include "GLTutor.h"
+#include "Quaternion.h"
+#include "VertexFormat.h"
 #include "MeshFactory.h"
 
 #include <assimp.hpp>      // C++ importer interface
 #include <aiScene.h>       // Output data structure
 #include <aiPostProcess.h> // Post processing flags
-
 MeshFactory::MeshFactory(MaterialDB* matDB, ITextureManager* texMgr) :
 	m_matDB(matDB), m_texMgr(texMgr) {
 
@@ -20,7 +21,229 @@ MeshFactory::MeshFactory(MaterialDB* matDB, ITextureManager* texMgr) :
 MeshFactory::~MeshFactory() {
 }
 
-VertexElementSemantic MeshFactory::_vertexTexCoordSemanticFromTexCoordIndex(uint8_t texIndex) {
+Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
+
+	ulong numVertices = 2 + numSegments * (numRings - 1);
+	VertexFormat* vf = VertexFormat::create(VF_V3_N3_T2);
+	VertexAttribute* vaVertices = vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3, 0, 0);
+	vaVertices->m_vbo->allocate(numVertices);
+
+	VertexAttribute* vaNormals = vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3, 0, 0);
+	vaNormals->m_vbo->allocate(numVertices);
+
+	VertexAttribute* vaTexCoords = vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3, 0, 0);
+	vaTexCoords->m_vbo->allocate(numVertices);
+
+	float* vertices = reinterpret_cast<float*> (vaVertices->m_vbo->mapData());
+	float* normals = reinterpret_cast<float*> (vaNormals->m_vbo->mapData());
+	float* uvs = reinterpret_cast<float*> (vaTexCoords->m_vbo->mapData());
+
+	// every vertex in an internal ring is shared by 6 triangles, the outmost rings have vertices
+	// that are shared by 5 triangles and the top and bottom vertices are shared by as many triangles
+	// as there are segments
+	uint32_t numIndices = 2 * numSegments * (numRings - 1);
+
+	IndexArrayPtr ib(new uint32_t[numIndices]);
+	uint32_t* indices = ib.get();
+
+	Vec3f tempNormal;
+	float dLat = M_PI * (1.0f / numRings);
+	float dLong = 2.0f * M_PI * (1.0f / numSegments);
+	uint32_t currentVertexIdx = 0;
+
+	// start from the bottom vertex and process vertices and triangles of each ring
+	for (uint ring = 0; ring <= numRings; ring++) {
+		float la = ring * dLat;
+		float ringRadius = radius * sinf(la);
+		for (uint segment = 0; segment < numSegments; segment++) {
+			float lo = segment * dLong;
+			float sinPhi = sinf(la);
+			float z = ringRadius * cosf(lo);
+			float x = z * sinPhi;
+			float y = ringRadius * sinf(lo) * sinPhi;
+			*vertices++ = x;
+			*vertices++ = y;
+			*vertices++ = z;
+
+			tempNormal.set(x, y, z);
+			tempNormal.normalize();
+			*normals++ = tempNormal.x;
+			*normals++ = tempNormal.y;
+			*normals++ = tempNormal.z;
+
+			*uvs++ = float(segment) / numSegments;
+			*uvs++ = float(ring) / numRings;
+
+			if (ring != (numRings - 1)) {
+				// fill in the indices of the triangle consisting of this vertex, the vertex immediately above the
+				// current and the vertex above and to the right of the current
+				*indices++ = currentVertexIdx;
+				*indices++ = currentVertexIdx + numSegments + 1;
+				*indices++ = currentVertexIdx + numSegments;
+			}
+
+			if (ring != 0) {
+				// fill in the indices of the triangle consisting of this vertex, the vertex above and to the right
+				// of the current and the vertex at the right of the current
+				*indices++ = currentVertexIdx;
+				*indices++ = currentVertexIdx + 1;
+				*indices++ = clamp(currentVertexIdx + numSegments + 1, 0, numVertices);
+			}
+
+			++currentVertexIdx;
+
+			// first and last rings have a single vertex
+			if (ring == 0 || ring == numRings) {
+				break;
+			}
+		}
+	}
+
+	vaVertices->m_vbo->unmapData();
+	vaNormals->m_vbo->unmapData();
+	vaTexCoords->m_vbo->unmapData();
+
+	Mesh* sphere = new Mesh();
+	sphere->getBounds().addPoint(radius, radius, radius);
+	sphere->getBounds().addPoint(-radius, -radius, -radius);
+	sphere->updateVertexData(vf, numVertices);
+	sphere->updateIndexData(ib, numIndices);
+	return sphere;
+}
+
+std::list<Mesh*> MeshFactory::createFromFile(String filename) {
+	Assimp::Importer importer;
+	std::list<Mesh*> meshes;
+	const aiScene* model = importer.ReadFile(filename, aiProcess_FixInfacingNormals | aiProcess_Triangulate
+			| aiProcess_CalcTangentSpace);
+	if (!model) {
+		std::cerr << importer.GetErrorString() << std::endl;
+	} else {
+		std::vector<Material*> materials;
+		for (uint32_t m = 0; m < model->mNumMaterials; m++) {
+			Material* mat = _readSingleMaterial(model->mMaterials[m]);
+			materials.push_back(mat);
+			m_matDB->addMaterial(mat);
+		}
+		for (uint32_t i = 0; i < model->mNumMeshes; i++) {
+			meshes.push_back(_readSingleMesh(model->mMeshes[i], materials));
+		}
+	}
+	return meshes;
+}
+
+Mesh* MeshFactory::createQuad(const Vec3f& center, const Vec3f& facingDir, float xsize, float ysize) {
+	/*
+	 * V3 (-1, 1)              V2(1, 1)
+	 * +-------------------------+
+	 * |                         |
+	 * |                         |
+	 * |                         |
+	 * |                         |
+	 * |                         |
+	 * |                         |
+	 * +-------------------------+
+	 * V0 (-1, -1)             V1(1, -1)
+	 */
+
+	//	uint16_t indices[] = { 0, 1, 2, 0, 2, 3 };
+
+	VertexFormat* vf = new VertexFormat();
+
+	// add vertex positions
+	uint32_t offset = 4 * VertexAttribute::getFormatSize(VertexFormat_FLOAT3);
+
+	VertexAttribute* ve = vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3, 0, 0);
+	ve->m_vbo->allocate(4);
+	float* fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
+
+	Vec3f lowLeft(-xsize, -ysize, 0.0f);
+	Vec3f lowRight(xsize, -ysize, 0.0f);
+	Vec3f upLeft(-xsize, ysize, 0.0f);
+	Vec3f upRight(xsize, ysize, 0.0f);
+
+	lowLeft += center;
+	lowRight += center;
+	upLeft += center;
+	upRight += center;
+
+	Quaternionf quat = Quaternionf::getRotationArc(Vec3f::Z_Axis, facingDir);
+	Matrix4f m = quat.toMatrix();
+	lowLeft = m * lowLeft;
+	lowRight = m * lowRight;
+	upLeft = m * upLeft;
+	upRight = m * upRight;
+
+	lowLeft.memCpyTo(fData);
+	lowRight.memCpyTo(&fData[3]);
+	upRight.memCpyTo(&fData[6]);
+	upLeft.memCpyTo(&fData[9]);
+
+	ve->m_vbo->unmapData();
+
+	// add vertex normals
+	Vec3f n(facingDir.x, facingDir.y, facingDir.z);
+	n.normalize();
+
+	ve = vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3, offset, 0);
+	ve->m_vbo->allocate(4);
+	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
+	n.memCpyTo(fData, 4);
+
+	ve->m_vbo->unmapData();
+	offset += 4 * VertexAttribute::getFormatSize(VertexFormat_FLOAT3);
+
+	// add vertex colors
+	ve = vf->addAttribute(Vertex_Color, VertexFormat_FLOAT4, offset, 0);
+	ve->m_vbo->allocate(4);
+	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
+	Colour::WHITE.memCpyTo(fData, 4);
+
+	ve->m_vbo->unmapData();
+	offset += 4 * VertexAttribute::getFormatSize(VertexFormat_FLOAT4);
+
+	// add texture coordinates
+	ve = vf->addAttribute(Vertex_TexCoord0, VertexFormat_FLOAT2, offset, 0);
+	ve->m_vbo->allocate(4);
+	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
+	// V0
+	fData[0] = 0.0f;
+	fData[1] = 0.0f;
+
+	// V1
+	fData[2] = 1.0f;
+	fData[3] = 0.0f;
+
+	// V2
+	fData[4] = 1.0f;
+	fData[5] = 1.0f;
+
+	// V3
+	fData[6] = 0.0f;
+	fData[7] = 1.0f;
+
+	ve->m_vbo->unmapData();
+
+	IndexArrayPtr indices(new uint32_t[6]);
+	uint32_t* p = indices.get();
+
+	// lower-right triangle
+	*p++ = 0;
+	*p++ = 1;
+	*p++ = 2;
+
+	// upper-left triangle
+	*p++ = 0;
+	*p++ = 2;
+	*p++ = 3;
+
+	Mesh* mesh = new Mesh();
+	mesh->updateVertexData(vf, 4);
+	mesh->updateIndexData(indices, 6);
+	return mesh;
+}
+
+VertexAttributeSemantic MeshFactory::_vertexTexCoordSemanticFromTexCoordIndex(uint8_t texIndex) {
 	switch (texIndex) {
 	case 0:
 		return Vertex_TexCoord0;
@@ -43,12 +266,12 @@ VertexElementSemantic MeshFactory::_vertexTexCoordSemanticFromTexCoordIndex(uint
 	}
 }
 
-void MeshFactory::_copyVertexPosToVertexElementArray(aiMesh* mesh, VertexElement* ve) {
+void MeshFactory::_copyVertexPosToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve) {
 	float* fData;
 	short* sData;
 	uint8_t* bData;
 	void* data = ve->m_vbo->mapData();
-	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
+	size_t elementCount = VertexAttribute::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
 		sData = 0;
@@ -84,11 +307,11 @@ void MeshFactory::_copyVertexPosToVertexElementArray(aiMesh* mesh, VertexElement
 	ve->m_vbo->unmapData();
 }
 
-void MeshFactory::_copyVertexNormalsToVertexElementArray(aiMesh* mesh, VertexElement* ve) {
+void MeshFactory::_copyVertexNormalsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve) {
 	float* fData;
 	short* sData;
 	void* data = ve->m_vbo->mapData();
-	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
+	size_t elementCount = VertexAttribute::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
 		sData = 0;
@@ -112,11 +335,11 @@ void MeshFactory::_copyVertexNormalsToVertexElementArray(aiMesh* mesh, VertexEle
 	ve->m_vbo->unmapData();
 }
 
-void MeshFactory::_copyVertexTangentsToVertexElementArray(aiMesh* mesh, VertexElement* ve) {
+void MeshFactory::_copyVertexTangentsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve) {
 	float* fData;
 	short* sData;
 	void* data = ve->m_vbo->mapData();
-	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
+	size_t elementCount = VertexAttribute::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
 		sData = 0;
@@ -140,11 +363,11 @@ void MeshFactory::_copyVertexTangentsToVertexElementArray(aiMesh* mesh, VertexEl
 	ve->m_vbo->unmapData();
 }
 
-void MeshFactory::_copyVertexUVsToVertexElementArray(aiMesh* mesh, uint8_t uvSet, VertexElement* ve) {
+void MeshFactory::_copyVertexUVsToVertexAttributeArray(aiMesh* mesh, uint8_t uvSet, VertexAttribute* ve) {
 	float* fData;
 	short* sData;
 	void* data = ve->m_vbo->mapData();
-	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
+	size_t elementCount = VertexAttribute::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
 		sData = 0;
@@ -186,12 +409,12 @@ void MeshFactory::_copyVertexUVsToVertexElementArray(aiMesh* mesh, uint8_t uvSet
 	ve->m_vbo->unmapData();
 }
 
-void MeshFactory::_copyVertexColorsToVertexElementArray(aiMesh* mesh, VertexElement* ve) {
+void MeshFactory::_copyVertexColorsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve) {
 	float* fData;
 	short* sData;
 	uint8_t* bData;
 	void* data = ve->m_vbo->mapData();
-	size_t elementCount = VertexElement::getFormatElementCount(ve->m_format);
+	size_t elementCount = VertexAttribute::getFormatElementCount(ve->m_format);
 	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 		fData = 0;
 		sData = 0;
@@ -253,35 +476,35 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 
 	// Vertex_Pos vertex element, mandatory
 	uint32_t offset = 0;
-	VertexElementFormat format = VertexFormat_FLOAT3;
+	VertexAttributeFormat format = VertexFormat_FLOAT3;
 	VertexFormat* vf = new VertexFormat();
-	size_t formatSize = VertexElement::getFormatSize(format);
+	size_t formatSize = VertexAttribute::getFormatSize(format);
 
-//	void* posData = _allocateArrayForElement(importedMesh->mNumVertices, format);
-	VertexElement* ve = vf->addElement(Vertex_Pos, format, 0, 0);
+	//	void* posData = _allocateArrayForElement(importedMesh->mNumVertices, format);
+	VertexAttribute* ve = vf->addAttribute(Vertex_Pos, format, 0, 0);
 	ve->m_vbo->allocate(importedMesh->mNumVertices);
 	offset += importedMesh->mNumVertices * formatSize;
-	_copyVertexPosToVertexElementArray(importedMesh, ve);
+	_copyVertexPosToVertexAttributeArray(importedMesh, ve);
 
 	//TODO: ve->data can now be deallocated
 
 	// Vertex_Normal vertex element, optional
 	if (importedMesh->HasNormals()) {
 		format = VertexFormat_FLOAT3;
-		ve = vf->addElement(Vertex_Normal, format, offset, 0);
-//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
+		ve = vf->addAttribute(Vertex_Normal, format, offset, 0);
+		//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
 		ve->m_vbo->allocate(importedMesh->mNumVertices);
-		_copyVertexNormalsToVertexElementArray(importedMesh, ve);
-		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
+		_copyVertexNormalsToVertexAttributeArray(importedMesh, ve);
+		offset += importedMesh->mNumVertices * VertexAttribute::getFormatSize(format);
 	}
 
 	if (importedMesh->HasVertexColors(0)) {
 		format = VertexFormat_FLOAT4;
-		ve = vf->addElement(Vertex_Color, VertexFormat_FLOAT4, offset, 0);
-//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
+		ve = vf->addAttribute(Vertex_Color, VertexFormat_FLOAT4, offset, 0);
+		//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
 		ve->m_vbo->allocate(importedMesh->mNumVertices);
-		_copyVertexColorsToVertexElementArray(importedMesh, ve);
-		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
+		_copyVertexColorsToVertexAttributeArray(importedMesh, ve);
+		offset += importedMesh->mNumVertices * VertexAttribute::getFormatSize(format);
 	}
 
 	for (uint8_t t = 0; t < AI_MAX_NUMBER_OF_TEXTURECOORDS; t++) {
@@ -300,26 +523,26 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 				//TODO: error handling
 				break;
 			}
-			ve = vf->addElement(_vertexTexCoordSemanticFromTexCoordIndex(t), format, offset, 0);
-//			ve->_allocateArrayForElement(importedMesh->mNumVertices);
+			ve = vf->addAttribute(_vertexTexCoordSemanticFromTexCoordIndex(t), format, offset, 0);
+			//			ve->_allocateArrayForElement(importedMesh->mNumVertices);
 			ve->m_vbo->allocate(importedMesh->mNumVertices);
-			_copyVertexUVsToVertexElementArray(importedMesh, t, ve);
-			offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
+			_copyVertexUVsToVertexAttributeArray(importedMesh, t, ve);
+			offset += importedMesh->mNumVertices * VertexAttribute::getFormatSize(format);
 		}
 	}
 
 	if (importedMesh->HasTangentsAndBitangents()) {
 		format = VertexFormat_FLOAT3;
-		ve = vf->addElement(Vertex_Tangent, format, offset, 0);
-//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
+		ve = vf->addAttribute(Vertex_Tangent, format, offset, 0);
+		//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
 		ve->m_vbo->allocate(importedMesh->mNumVertices);
-		_copyVertexTangentsToVertexElementArray(importedMesh, ve);
-		offset += importedMesh->mNumVertices * VertexElement::getFormatSize(format);
+		_copyVertexTangentsToVertexAttributeArray(importedMesh, ve);
+		offset += importedMesh->mNumVertices * VertexAttribute::getFormatSize(format);
 
 		//		void* bitangetsArray = _allocateArrayForElement(mesh->mNumVertices, VertexFormat_FLOAT3);
-		//		vf->addElement(Vertex_Tangent, VertexFormat_FLOAT3, offset, bitangetsArray);
-		//		_copyVertexBiNormalssToVertexElementArray(mesh, ve);
-		//		offset += mesh->mNumVertices * VertexElement::getFormatSize(VertexFormat_FLOAT3);
+		//		vf->addAttribute(Vertex_Tangent, VertexFormat_FLOAT3, offset, bitangetsArray);
+		//		_copyVertexBiNormalssToVertexAttributeArray(mesh, ve);
+		//		offset += mesh->mNumVertices * VertexAttribute::getFormatSize(VertexFormat_FLOAT3);
 	}
 
 	uint32_t numIndices = 0;
@@ -359,14 +582,14 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 		}
 
 		for (uint32_t uv = 0; uv < std::min(MAX_TEXTURES_STACK, AI_MAX_NUMBER_OF_TEXTURECOORDS); uv++) {
-			uvIndices[uv] = mesh->getMaterial()->m_textures->texInputs[uv].uvSet;
+			uvIndices[uv] = mesh->getMaterial()->m_texStack->texInputs[uv].uvSet;
 		}
 
 		for (uint32_t input = 0; input < MAX_TEXTURES_STACK; input++) {
 			for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; uv++) {
-				if (mesh->getMaterial()->m_textures->texInputs[input].uvSet == uvIndices[uv]) {
-//					std::cout << "adjusting input  " << input << " to uv set " << uv << std::endl;
-					mesh->getMaterial()->m_textures->texInputs[input].uvSet = uv;
+				if (mesh->getMaterial()->m_texStack->texInputs[input].uvSet == uvIndices[uv]) {
+					//					std::cout << "adjusting input  " << input << " to uv set " << uv << std::endl;
+					mesh->getMaterial()->m_texStack->texInputs[input].uvSet = uv;
 					break;
 				}
 			}
@@ -409,7 +632,7 @@ Material* MeshFactory::_readSingleMaterial(aiMaterial* mat) {
 	meshModelMat->m_twoSided = ival;
 
 	TextureStack* texStack = new TextureStack();
-	meshModelMat->m_textures = TextureStackPtr(texStack);
+	meshModelMat->m_texStack = TextureStackPtr(texStack);
 
 	for (uint8_t t = 0; t < mat->GetTextureCount(aiTextureType_DIFFUSE); t++) {
 		aiString texPath;
@@ -479,182 +702,3 @@ Material* MeshFactory::_readSingleMaterial(aiMaterial* mat) {
 	}
 	return meshModelMat;
 }
-
-std::list<Mesh*> MeshFactory::createFromFile(String filename) {
-	Assimp::Importer importer;
-	std::list<Mesh*> meshes;
-	const aiScene* model = importer.ReadFile(filename, aiProcess_FixInfacingNormals | aiProcess_Triangulate
-			| aiProcess_CalcTangentSpace);
-	if (!model) {
-		std::cerr << importer.GetErrorString() << std::endl;
-	} else {
-		std::vector<Material*> materials;
-		for (uint32_t m = 0; m < model->mNumMaterials; m++) {
-			Material* mat = _readSingleMaterial(model->mMaterials[m]);
-			materials.push_back(mat);
-			m_matDB->addMaterial(mat);
-		}
-		for (uint32_t i = 0; i < model->mNumMeshes; i++) {
-			meshes.push_back(_readSingleMesh(model->mMeshes[i], materials));
-		}
-	}
-	return meshes;
-}
-
-Mesh* MeshFactory::createQuad() {
-	/*
-	 * V3 (-1, 1)              V2(1, 1)
-	 * +-------------------------+
-	 * |                         |
-	 * |                         |
-	 * |                         |
-	 * |                         |
-	 * |                         |
-	 * |                         |
-	 * +-------------------------+
-	 * V0 (-1, -1)             V1(1, -1)
-	 */
-
-	//	uint16_t indices[] = { 0, 1, 2, 0, 2, 3 };
-
-	VertexFormat* vf = new VertexFormat();
-
-	// add vertex positions
-	uint32_t offset = 4 * VertexElement::getFormatSize(VertexFormat_FLOAT3);
-
-	VertexElement* ve = vf->addElement(Vertex_Pos, VertexFormat_FLOAT3, 0, 0);
-//	ve->_allocateArrayForElement(4);
-	ve->m_vbo->allocate(4);
-//	float* fData = reinterpret_cast<float*> (ve->m_data);
-	float* fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
-	// V0
-	fData[0] = -1.0f;
-	fData[1] = -1.0f;
-	fData[2] = 0.0f;
-
-	// V1
-	fData[3] = 1.0f;
-	fData[4] = -1.0f;
-	fData[5] = 0.0f;
-
-	// V2
-	fData[6] = 1.0f;
-	fData[7] = 1.0f;
-	fData[8] = 0.0f;
-
-	// V3
-	fData[9] = -1.0f;
-	fData[10] = 1.0f;
-	fData[11] = 0.0f;
-//	ve->m_vbo->setData(ve->m_data, 4);
-	ve->m_vbo->unmapData();
-
-	// add vertex normals
-	ve = vf->addElement(Vertex_Normal, VertexFormat_FLOAT3, offset, 0);
-//	ve->_allocateArrayForElement(4);
-	ve->m_vbo->allocate(4);
-//	fData = reinterpret_cast<float*> (ve->m_data);
-	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
-	// V0
-	fData[0] = 0.0f;
-	fData[1] = 0.0f;
-	fData[2] = 1.0f;
-
-	// V1
-	fData[3] = 0.0f;
-	fData[4] = 0.0f;
-	fData[5] = 1.0f;
-
-	// V2
-	fData[6] = 0.0f;
-	fData[7] = 0.0f;
-	fData[8] = 1.0f;
-
-	// V3
-	fData[9] = 0.0f;
-	fData[10] = 0.0f;
-	fData[11] = 1.0f;
-
-//	ve->m_vbo->setData(ve->m_data, 4);
-	ve->m_vbo->unmapData();
-	offset += 4 * VertexElement::getFormatSize(VertexFormat_FLOAT3);
-
-	// add vertex colors
-	ve = vf->addElement(Vertex_Color, VertexFormat_FLOAT4, offset, 0);
-//	ve->_allocateArrayForElement(4);
-	ve->m_vbo->allocate(4);
-//	fData = reinterpret_cast<float*> (ve->m_data);
-	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
-
-	// V0
-	fData[0] = 1.0f;
-	fData[1] = 1.0f;
-	fData[2] = 1.0f;
-	fData[3] = 1.0f;
-
-	// V1
-	fData[4] = 1.0f;
-	fData[5] = 1.0f;
-	fData[6] = 1.0f;
-	fData[7] = 1.0f;
-
-	// V2
-	fData[8] = 1.0f;
-	fData[9] = 1.0f;
-	fData[10] = 1.0f;
-	fData[11] = 1.0f;
-
-	// V3
-	fData[12] = 1.0f;
-	fData[13] = 1.0f;
-	fData[14] = 1.0f;
-	fData[15] = 1.0f;
-
-//	ve->m_vbo->setData(ve->m_data, 4);
-	ve->m_vbo->unmapData();
-	offset += 4 * VertexElement::getFormatSize(VertexFormat_FLOAT4);
-
-	// add texture coordinates
-	ve = vf->addElement(Vertex_TexCoord0, VertexFormat_FLOAT2, offset, 0);
-//	ve->_allocateArrayForElement(4);
-	ve->m_vbo->allocate(4);
-//	fData = reinterpret_cast<float*> (ve->m_data);
-	fData = reinterpret_cast<float*> (ve->m_vbo->mapData());
-	// V0
-	fData[0] = 0.0f;
-	fData[1] = 0.0f;
-
-	// V1
-	fData[2] = 1.0f;
-	fData[3] = 0.0f;
-
-	// V2
-	fData[4] = 1.0f;
-	fData[5] = 1.0f;
-
-	// V3
-	fData[6] = 0.0f;
-	fData[7] = 1.0f;
-
-//	ve->m_vbo->setData(ve->m_data, 4);
-	ve->m_vbo->unmapData();
-
-	IndexArrayPtr indices(new uint32_t[6]);
-	uint32_t* p = indices.get();
-
-	// lower-right triangle
-	*p++ = 0;
-	*p++ = 1;
-	*p++ = 2;
-
-	// upper-left triangle
-	*p++ = 0;
-	*p++ = 2;
-	*p++ = 3;
-
-	Mesh* mesh = new Mesh();
-	mesh->updateVertexData(vf, 4);
-	mesh->updateIndexData(indices, 6);
-	return mesh;
-}
-

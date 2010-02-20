@@ -39,10 +39,16 @@ uniform int u_NumTextures;
 
 {{#USE_LIGHTING}}
 
+#define LT_Directional 1
+#define LT_Lamp 2
+#define LT_Spot 3
+
 // all vectors are specified in camera space and directional vectors are normalized
 struct Light_t {
+	int type;
 	vec3 pos;	// for directional lights this is equal to the direction 
 	vec3 dir;
+	vec4 ambient;
 	vec4 diffuse;
 	vec4 specular;
 	float cosSpotCutOff;	// cosine of the spot cut-off angle

@@ -30,16 +30,17 @@ public:
 	 * It extends from -1.0 to 1.0 in the X and Y directions. Vertex normals and uv coordinates are also generated.
 	 * @return the quad mesh
 	 */
-	Mesh* createQuad();
+	Mesh* createQuad(const Vec3f& center = Vec3f::Zero, const Vec3f& facingDir = Vec3f::Z_Axis, float xsize = 2.0f, float ysize = 2.0f);
+	Mesh* createSphere(float radius = 1.0f, uint numSegments = 32, uint numRings = 16);
 	std::list<Mesh*> createFromFile(String filename);
 
 private:
-	VertexElementSemantic _vertexTexCoordSemanticFromTexCoordIndex(uint8_t texIndex);
-	void _copyVertexPosToVertexElementArray(aiMesh* mesh, VertexElement* ve);
-	void _copyVertexNormalsToVertexElementArray(aiMesh* mesh, VertexElement* ve);
-	void _copyVertexTangentsToVertexElementArray(aiMesh* mesh, VertexElement* ve);
-	void _copyVertexUVsToVertexElementArray(aiMesh* mesh, uint8_t uvSet, VertexElement* ve);
-	void _copyVertexColorsToVertexElementArray(aiMesh* mesh, VertexElement* ve);
+	VertexAttributeSemantic _vertexTexCoordSemanticFromTexCoordIndex(uint8_t texIndex);
+	void _copyVertexPosToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
+	void _copyVertexNormalsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
+	void _copyVertexTangentsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
+	void _copyVertexUVsToVertexAttributeArray(aiMesh* mesh, uint8_t uvSet, VertexAttribute* ve);
+	void _copyVertexColorsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
 	Mesh* _readSingleMesh(aiMesh* importedMesh, std::vector<Material*> materials);
 	Material* _readSingleMaterial(aiMaterial* mat);
 };

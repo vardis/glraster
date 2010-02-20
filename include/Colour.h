@@ -5,7 +5,12 @@
 class Colour {
 
 public:
-	float r, g, b, a;
+	float rgba[4];
+	float& r;
+	float& g;
+	float& b;
+	float& a;
+
 	static Colour WHITE;
 
 public:
@@ -13,6 +18,8 @@ public:
 	Colour(float _r, float _g, float _b);
 	Colour(float _r, float _g, float _b, float _a);
 	Colour(const Colour& _c);
+
+	void memCpyTo(float* ptrTo, int repeatCount = 1);
 
 	void set(float _r, float _g, float _b, float _a = 1.0f);
 	inline void set(float _r) {

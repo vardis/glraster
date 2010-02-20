@@ -6,13 +6,14 @@
  */
 
 #include "GLTutor.h"
+#include "GLUtil.h"
 #include "Texture.h"
 
 Texture::Texture() :
 	m_filename(""), m_allocated(false), m_width(0), m_height(0), m_sourceWidth(0), m_sourceHeight(0), m_texID(0),
 			m_textureTarget(GL_TEXTURE_2D), m_internalFormat(GL_RGBA8), m_useMipmaps(false), m_hasAlpha(false),
-			m_minFilter(TexFilter_Linear), m_magFilter(TexFilter_Linear), m_wrapping(TexWrapMode_Repeat), m_anisotropy(
-					1.0f) {
+			m_minFilter(TexFilter_Linear), m_magFilter(TexFilter_Linear), m_wrapping(TexWrapMode_Repeat),
+			m_anisotropy(1.0f), m_envColour(Colour::WHITE) {
 }
 
 Texture::~Texture() {
@@ -21,28 +22,96 @@ Texture::~Texture() {
 	}
 }
 
-/** Allocates graphics resources */
-bool Texture::allocate() {
-	if (!m_texID) {
-		glGenTextures(1, &m_texID);
+void Texture::setData(GLenum sourceFormat, GLenum dataType, void* data) {
+	this->setMipmapData(0, sourceFormat, dataType, data);
+}
+
+void Texture::setMipmapData(uint8_t level, GLenum sourceFormat, GLenum dataType, void* data) {
+	if (this->isCompressed()) {
+		SAFE_THROW(GLException(E_BADOP, "Texture has compressed format, use setCompressedData instead"));
 	}
+
+	if (!m_allocated) {
+		SAFE_THROW(GLException(E_BADOP, "Texture hasn't been allocated yet"));
+	}
+
+	uint levelWidth = m_width >> level;
+	uint levelHeight = m_height >> level;
+
+	this->bind();
+
+	if (GLUtil::isBGR(sourceFormat)) {
+		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+	}
+
+	if (m_textureTarget == GL_TEXTURE_1D) {
+		glTexSubImage1D(GL_TEXTURE_1D, level, 0, levelWidth, sourceFormat, dataType, data);
+	} else if (m_textureTarget == GL_TEXTURE_2D) {
+		glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, levelWidth, levelHeight, sourceFormat, dataType, data);
+	} else {
+		SAFE_THROW(GLException(E_NOTIMPL));
+	}
+
+	if (GLUtil::isBGR(sourceFormat)) {
+		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+	}
+}
+
+void Texture::setCompressedData(uint32_t size, void* data) {
+	this->setCompressedMipmapData(0, size, data);
+}
+
+void Texture::setCompressedMipmapData(uint8_t level, uint32_t size, void* data) {
+	if (!this->isCompressed()) {
+		SAFE_THROW(GLException(E_BADOP, "Texture is not compressed, use setData instead"));
+	}
+
+	uint levelWidth = m_width >> level;
+	uint levelHeight = m_height >> level;
+
+	this->bind();
+	if (m_textureTarget == GL_TEXTURE_1D) {
+		glCompressedTexImage1D(GL_TEXTURE_1D, level, m_internalFormat, levelWidth, 0, size, data);
+	} else if (m_textureTarget == GL_TEXTURE_2D) {
+		glCompressedTexImage2D(GL_TEXTURE_2D, level, m_internalFormat, levelWidth, levelHeight, 0, size, data);
+	} else {
+		SAFE_THROW(GLException(E_NOTIMPL));
+	}
+}
+
+void Texture::allocate(GLenum internalFormat, void* data, uint32_t compressedSize) {
+
+	glGenTextures(1, &m_texID);
 	glBindTexture(m_textureTarget, m_texID);
 
+	m_internalFormat = internalFormat;
+
 	// allocate memory storage for the texture
-	if (m_textureTarget == GL_TEXTURE_1D) {
-		glTexImage1D(GL_TEXTURE_1D, 0, m_internalFormat, m_width, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-	} else if (m_textureTarget == GL_TEXTURE_2D) {
-		glTexImage2D(GL_TEXTURE_2D, 0, m_internalFormat, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-	} else {
+	switch (m_textureTarget) {
+	case GL_TEXTURE_1D:
+		if (!this->isCompressed()) {
+			glTexImage1D(GL_TEXTURE_1D, 0, m_internalFormat, m_width, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		}
+		break;
+	case GL_TEXTURE_2D:
+		if (!this->isCompressed()) {
+			glTexImage2D(GL_TEXTURE_2D, 0, m_internalFormat, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		}
+		break;
+	default:
 		// TODO: support more texture types
+		SAFE_THROW(GLException(E_NOTIMPL))
+		;
 	}
 
-	if (m_useMipmaps) {
+	if (m_useMipmaps && !this->isCompressed()) {
 		_allocateMipmaps();
-		glGenerateMipmap(m_textureTarget);
 	}
-
 	m_allocated = true;
+}
+
+bool Texture::allocate() {
+	this->allocate(m_internalFormat, 0);
 	return true;
 }
 
@@ -58,16 +127,23 @@ void Texture::_allocateMipmaps() {
 		glTexImage2D(GL_TEXTURE_2D, level, m_internalFormat, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 		++level;
 	}
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, level - 1);
 }
 
 void Texture::fromImage(const Image& img) {
-	m_width = img.m_width;
-	m_sourceWidth = img.m_width;
-	m_height = img.m_height;
-	m_sourceHeight = img.m_height;
+	m_width = img.getWidth();
+	m_sourceWidth = img.getWidth();
+	m_height = img.getHeight();
+	m_sourceHeight = img.getHeight();
 	m_textureTarget = (m_height > 1) ? GL_TEXTURE_2D : GL_TEXTURE_1D;
-	m_internalFormat = _getInternalFormat(img.m_format, img.m_type);
+	m_internalFormat = _getInternalFormat(img.getFormat(), img.getDataType());
 	m_hasAlpha = (m_internalFormat == GL_RGBA || m_internalFormat == GL_BGRA);
+
+	if (img.hasMipmaps() || isCompressed()) {
+		m_useMipmaps = false;
+	} else {
+		m_useMipmaps = img.hasMipmaps();
+	}
 
 	if (allocate()) {
 		glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
@@ -78,104 +154,135 @@ void Texture::fromImage(const Image& img) {
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 
-		if (m_textureTarget == GL_TEXTURE_1D) {
-			glTexSubImage1D(GL_TEXTURE_1D, 0, 0, m_width, img.m_format, img.m_type, img.m_data);
-		} else if (m_textureTarget == GL_TEXTURE_2D) {
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_width, m_height, img.m_format, img.m_type, img.m_data);
-		} else {
-			// TODO: support more texture types
-		}
-
-		if (m_useMipmaps) {
-			glGenerateMipmap(m_textureTarget);
-		}
+		this->setData(img.getFormat(), img.getDataType(), img.getData());
 
 		glPopClientAttrib();
+
+		m_useMipmaps = img.hasMipmaps();
+		uint mipMapCount = (img.hasMipmaps() ? img.getNumMipmaps() + 1 : 1);
+		for (unsigned int level = 0; level < mipMapCount; ++level) {
+			if (this->isCompressed()) {
+				this->setCompressedMipmapData(level, img.getMipmap(level).m_compressedSize, img.getData(level));
+			} else {
+				this->setMipmapData(level, img.getFormat(), img.getDataType(), img.getData(level));
+			}
+		}
+
+		if (!img.hasMipmaps() && m_useMipmaps && !isCompressed()) {
+			glGenerateMipmap(m_textureTarget);
+		}
+	}
+}
+
+void Texture::updateMipmaps() {
+	if (m_useMipmaps && !isCompressed()) {
+		glGenerateMipmap(m_textureTarget);
+	}
+}
+
+void Texture::bind() {
+	if (m_texID && glIsTexture(m_texID)) {
+		glEnable(m_textureTarget);
+		glBindTexture(m_textureTarget, m_texID);
+	} else {
+		SAFE_THROW(GLException(E_BADOP, "Binding non texture"));
 	}
 }
 
 void Texture::configureGLState() {
 
-	if (m_texID && glIsTexture(m_texID)) {
-		glEnable(m_textureTarget);
-		glBindTexture(m_textureTarget, m_texID);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, /*texStack->texOutputs[i].blendOp*/GL_MODULATE);
-		if (m_hasAlpha) {
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		} else {
-			glDisable(GL_BLEND);
-		}
+	this->bind();
 
-		// Minification filter for mipmaps or without mipmaps
-		if (m_useMipmaps) {
-			switch (m_minFilter) {
-			case TexFilter_Linear:
-			case TexFilter_Linear_Mipmap_Linear:
-				glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-				break;
-			case TexFilter_Linear_Mipmap_Bilinear:
-				glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-				break;
-			case TexFilter_Bilinear:
-			case TexFilter_Bilinear_Mipmap_Bilinear:
-				glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				break;
-			case TexFilter_Bilinear_Mipmap_Linear:
-			default:
-				glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-				break;
-			}
+	// deprecated
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, /*texStack->texOutputs[i].blendOp*/GL_MODULATE);
+	if (m_hasAlpha) {
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	} else {
+		glDisable(GL_BLEND);
+	}
 
-		} else {
-			// no mipmaps
-			glTexParameteri(m_textureTarget, GL_TEXTURE_MAX_LEVEL, 0);
-
-			switch (m_minFilter) {
-			case TexFilter_Linear:
-				glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				break;
-			case TexFilter_Bilinear:
-			default:
-				glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				break;
-			}
-		}
-
-		// Magnification filter
-		switch (m_magFilter) {
+	// Minification filter for mipmaps or without mipmaps
+	if (m_useMipmaps) {
+		switch (m_minFilter) {
 		case TexFilter_Linear:
-			glTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		case TexFilter_Linear_Mipmap_Linear:
+			glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+			break;
+		case TexFilter_Linear_Mipmap_Bilinear:
+			glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+			break;
+		case TexFilter_Bilinear:
+		case TexFilter_Bilinear_Mipmap_Bilinear:
+			glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			break;
+		case TexFilter_Bilinear_Mipmap_Linear:
+		default:
+			glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+			break;
+		}
+
+	} else {
+		// no mipmaps
+		glTexParameteri(m_textureTarget, GL_TEXTURE_MAX_LEVEL, 0);
+
+		switch (m_minFilter) {
+		case TexFilter_Linear:
+			glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			break;
 		case TexFilter_Bilinear:
 		default:
-			glTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			break;
-		}
-
-		// wrapping mode
-		switch (m_wrapping) {
-		case TexWrapMode_Clamp:
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP);
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP);
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_R, GL_CLAMP);
-			break;
-		case TexWrapMode_ClampEdge:
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-			break;
-		case TexWrapMode_Repeat:
-		default:
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_R, GL_REPEAT);
+			glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			break;
 		}
 	}
+
+	// Magnification filter
+	switch (m_magFilter) {
+	case TexFilter_Linear:
+		glTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		break;
+	case TexFilter_Bilinear:
+	default:
+		glTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		break;
+	}
+
+	// wrapping mode
+	switch (m_wrapping) {
+	case TexWrapMode_Clamp:
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_R, GL_CLAMP);
+		break;
+	case TexWrapMode_ClampEdge:
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		break;
+	case TexWrapMode_Repeat:
+	default:
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_R, GL_REPEAT);
+		break;
+	}
+
+	// set anisotropy amount
+	if (m_anisotropy > 1.0f && GLUtil::isAnisotropicFilterSupported()) {
+		glTexParameterf(m_textureTarget, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(m_anisotropy,
+				GLUtil::getMaxAnisotropy()));
+	}
+
 }
 
 GLint Texture::_getInternalFormat(GLenum format, GLenum type) {
+
+	// pass through compressed format
+	if (GLUtil::isCompressedFormat(format)) {
+		return format;
+	}
+
 	//TODO: Add more cases
 	switch (format) {
 	case GL_DEPTH_COMPONENT:
@@ -222,4 +329,8 @@ GLint Texture::_getInternalFormat(GLenum format, GLenum type) {
 		std::cerr << "mismatch in texture internal format\n";
 		return GL_RGBA;
 	}
+}
+
+bool Texture::isCompressed() const {
+	return GLUtil::isCompressedFormat(m_internalFormat);
 }

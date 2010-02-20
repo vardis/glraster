@@ -1,5 +1,5 @@
 /*
- * VertexElementBuffer.h
+ * VertexAttributeBuffer.h
  *
  *  Created on: Dec 26, 2009
  *      Author: giorgos
@@ -8,9 +8,8 @@
 #ifndef VERTEXBUFFER_H_
 #define VERTEXBUFFER_H_
 
-//#include "VertexFormat.h"
 
-class VertexElement;
+class VertexAttribute;
 
 /**
  * First allocate data for the buffer:
@@ -34,10 +33,10 @@ class VertexElement;
  * When you are done with this buffer and want to explicitly clean up:
  *   vbo.deallocate();
  */
-class VertexElementBuffer {
+class VertexAttributeBuffer {
 public:
 	GLuint         m_vboID;
-	VertexElement* m_ve;
+	VertexAttribute* m_ve;
 	uint32_t       m_numElements;
 	GLenum         m_usageHint;
 
@@ -45,8 +44,8 @@ private:
 	void*          m_mapped;
 
 public:
-	VertexElementBuffer(VertexElement* ve);
-	virtual ~VertexElementBuffer();
+	VertexAttributeBuffer(VertexAttribute* ve);
+	virtual ~VertexAttributeBuffer();
 
 	void setData(void* data, uint32_t numElements);
 
@@ -68,6 +67,6 @@ public:
 	void* mapSubData(GLbitfield accessType = GL_MAP_WRITE_BIT, uint32_t offset = 0, uint32_t count = 0);
 	void unmapData();
 };
-typedef shared_ptr<VertexElementBuffer> VertexElementBufferPtr;
+typedef shared_ptr<VertexAttributeBuffer> VertexAttributeBufferPtr;
 
 #endif /* VERTEXBUFFER_H_ */

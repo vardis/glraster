@@ -84,14 +84,14 @@ bool TTFont::create() {
 	uint glyphsPerDim = (uint) sqrt(charCount) + 1;
 
 	Image texImg;
-	texImg.m_format = GL_RGBA;
-	texImg.m_width = getClosestPow2(glyphsPerDim * maxWidth);
-	texImg.m_height = getClosestPow2(glyphsPerDim * maxHeight);
-	texImg.m_type = GL_UNSIGNED_BYTE;
+	texImg.setFormat(GL_RGBA);
+	texImg.setWidth(getClosestPow2(glyphsPerDim * maxWidth));
+	texImg.setHeight(getClosestPow2(glyphsPerDim * maxHeight));
+	texImg.setDataType(GL_UNSIGNED_BYTE);
 	texImg.allocate();
 
-	uint glypsX = round(texImg.m_width / maxWidth);
-	uint glypsY = round(texImg.m_height / maxHeight);
+	uint glypsX = round(texImg.getWidth() / maxWidth);
+	uint glypsY = round(texImg.getHeight() / maxHeight);
 
 	// for every codepoint:
 	//    -load the corresponding glyph
@@ -99,9 +99,9 @@ bool TTFont::create() {
 	//    -copy the bitmap at the current position within the texture image
 	//    -assign uv coordinates for the current codepoint
 	//    -advance the position within the texture image
-	int32_t imgPitch = texImg.m_width * 4; // texSize;
+	int32_t imgPitch = texImg.getWidth() * 4; // texSize;
 	int32_t imgX = 0, imgY = 0;
-	uint8_t* img = (uint8_t*) texImg.m_data;
+	uint8_t* img = (uint8_t*) texImg.getData();
 	uint16_t c1 = 0;
 	it = m_ranges.begin();
 	while (it != m_ranges.end()) {
@@ -109,10 +109,10 @@ bool TTFont::create() {
 			if (!FT_Load_Char(m_ftFace, i, FT_LOAD_RENDER)) {
 				uint8_t* bitmap = m_ftFace->glyph->bitmap.buffer;
 				int offset = (maxYBearing >> 6) - (m_ftFace->glyph->metrics.horiBearingY >> 6);
-				std::cout << "offsetY = " << offset << std::endl;
-				std::cout << "bitmap rows = " << m_ftFace->glyph->bitmap.rows << "\n";
+//				std::cout << "offsetY = " << offset << std::endl;
+//				std::cout << "bitmap rows = " << m_ftFace->glyph->bitmap.rows << "\n";
 				for (int r = 0; r < m_ftFace->glyph->bitmap.rows; r++) {
-					std::cout << "pointer = " << imgY + m_ftFace->glyph->bitmap.rows - r - offset << "\n";
+//					std::cout << "pointer = " << imgY + m_ftFace->glyph->bitmap.rows - r - offset << "\n";
 					uint8_t* imgData = &img[(imgY + m_maxHeight - r - offset) * imgPitch + imgX * 4];
 					for (int c = 0; c < m_ftFace->glyph->bitmap.width; c++) {
 						*imgData++ = *bitmap;
@@ -126,10 +126,10 @@ bool TTFont::create() {
 				cp.m_codepoint = i;
 				cp.m_width = m_ftFace->glyph->advance.x >> 6;
 				cp.m_height = m_maxHeight - offset;
-				cp.m_u0 = imgX / (float) texImg.m_width;
-				cp.m_u1 = cp.m_u0 + (cp.m_width / (float) texImg.m_width);
-				cp.m_v0 = imgY / (float) texImg.m_height;
-				cp.m_v1 = cp.m_v0 + (cp.m_height / (float) texImg.m_height);
+				cp.m_u0 = imgX / (float) texImg.getWidth();
+				cp.m_u1 = cp.m_u0 + (cp.m_width / (float) texImg.getWidth());
+				cp.m_v0 = imgY / (float) texImg.getHeight();
+				cp.m_v1 = cp.m_v0 + (cp.m_height / (float) texImg.getHeight());
 				cp.m_bearingX = m_ftFace->glyph->metrics.horiBearingX >> 6;
 				m_codepoints.push_back(cp);
 			}
@@ -165,14 +165,14 @@ bool TTFont::create() {
 	mat->m_shininess = 0.0f;
 	mat->m_transparent = true;
 	mat->m_twoSided = false;
-	mat->m_textures.reset(new TextureStack());
-	mat->m_textures->textures[0] = m_tex;
-	mat->m_textures->texInputs[0].mapping = TexMapInput_UV;
-	mat->m_textures->texInputs[0].uvSet = 0;
-	mat->m_textures->texInputs[0].texMatrix.identity();
-	mat->m_textures->texOutputs[0].mapTo = TexMapTo_Diffuse;
-	mat->m_textures->texOutputs[0].blendOp = TexBlendOp_Multiply;
-	mat->m_textures->texOutputs[0].blendFactor = 0.5f;
+	mat->m_texStack.reset(new TextureStack());
+	mat->m_texStack->textures[0] = m_tex;
+	mat->m_texStack->texInputs[0].mapping = TexMapInput_UV;
+	mat->m_texStack->texInputs[0].uvSet = 0;
+	mat->m_texStack->texInputs[0].texMatrix.identity();
+	mat->m_texStack->texOutputs[0].mapTo = TexMapTo_Diffuse;
+	mat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
+	mat->m_texStack->texOutputs[0].blendFactor = 0.5f;
 	m_material.reset(mat);
 
 	return true;

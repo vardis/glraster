@@ -122,3 +122,58 @@ void GLSLProgram::reset() {
 	m_compiled = false;
 	m_hasErrors = false;
 }
+
+GLint GLSLProgram::getAttributeIndex(const char* attributeName) {
+	GLint loc = glGetAttribLocation(m_progID, attributeName);
+	if (loc == 1 && strncmp("gl_", attributeName, 3)) {
+		SAFE_THROW(GLException(E_BADARG, "The specified vertex attribute hasn't been activated"));
+	}
+	return loc;
+}
+
+GLint GLSLProgram::getAttributeIndex(const String& attributeName) {
+	return this->getAttributeIndex(attributeName.c_str());
+}
+
+template<typename T>
+void GLSLProgram::setUniform(const char* uniformName, T value) {
+	if (!m_linked) {
+		SAFE_THROW(GLException(E_BADSTATE, "GLSL program must be linked before binding uniforms"));
+	}
+	int loc = glGetUniformLocation(m_progID, uniformName);
+	this->setUniform(loc, value);
+}
+
+template<typename T>
+void GLSLProgram::setUniform(const String& uniformName, T value) {
+	if (!m_linked) {
+		SAFE_THROW(GLException(E_BADSTATE, "GLSL program must be linked before binding uniforms"));
+	}
+	this->setUniform(uniformName.c_str(), value);
+}
+
+void GLSLProgram::setUniform(int uniformLoc, int value) {
+	assert(m_linked);
+	glUniform1iv(uniformLoc, 1, &value);
+}
+
+void GLSLProgram::setUniform(int uniformLoc, unsigned int value) {
+	assert(m_linked);
+	glUniform1uiv(uniformLoc, 1, &value);
+}
+
+void GLSLProgram::setUniform(int uniformLoc, float value) {
+	assert(m_linked);
+	glUniform1fv(uniformLoc, 1, &value);
+}
+
+void GLSLProgram::setUniform(int uniformLoc, Colour& value) {
+	assert(m_linked);
+	glUniform4fv(uniformLoc, 1, value.rgba);
+}
+
+// Function templates instantiations
+template void GLSLProgram::setUniform(const char* uniformName, Colour value);
+template void GLSLProgram::setUniform(const char* uniformName, float value);
+template void GLSLProgram::setUniform(const char* uniformName, unsigned int value);
+

@@ -10,7 +10,7 @@
 
 #define MAX_VERTEX_ELEMENTS 32
 
-typedef enum VertexElementSemantic {
+typedef enum VertexAttributeSemantic {
 	Vertex_Pos = 1,
 	Vertex_Normal = 2,
 	Vertex_BiNormal = 4,
@@ -25,9 +25,9 @@ typedef enum VertexElementSemantic {
 	Vertex_TexCoord5 = 2048,
 	Vertex_TexCoord6 = 4096,
 	Vertex_TexCoord7 = 8192
-} VertexElementSemantic;
+} VertexAttributeSemantic;
 
-typedef enum VertexElementFormat {
+typedef enum VertexAttributeFormat {
 	VertexFormat_FLOAT1,
 	VertexFormat_FLOAT2,
 	VertexFormat_FLOAT3,
@@ -38,39 +38,36 @@ typedef enum VertexElementFormat {
 	VertexFormat_SHORT4,
 	VertexFormat_UBYTE3,
 	VertexFormat_UBYTE4,
-} VertexElementFormat;
+} VertexAttributeFormat;
 
-#include "VertexElementBuffer.h"
+#include "VertexAttributeBuffer.h"
 
-typedef struct VertexElement {
+typedef struct VertexAttribute {
 
-	VertexElementSemantic m_semantic;
-	VertexElementFormat m_format;
+	VertexAttributeSemantic m_semantic;
+	VertexAttributeFormat m_format;
 	uint16_t m_size;
 	uint32_t m_offset;
-	//	void* m_data;
-	VertexElementBufferPtr m_vbo;
+	VertexAttributeBufferPtr m_vbo;
 
-	VertexElement(VertexElementSemantic semantic, VertexElementFormat format, uint32_t offset, void* data) :
-		m_semantic(semantic), m_format(format), m_size(getFormatSize(format)), m_offset(offset), /*m_data(data),*/
-				m_vbo() {
-		m_vbo = VertexElementBufferPtr(new VertexElementBuffer(this));
+	VertexAttribute(VertexAttributeSemantic semantic, VertexAttributeFormat format, uint32_t offset, void* data) :
+		m_semantic(semantic), m_format(format), m_size(getFormatSize(format)), m_offset(offset), m_vbo() {
+		m_vbo = VertexAttributeBufferPtr(new VertexAttributeBuffer(this));
 	}
-	~VertexElement() {
-		//		_deleteData();
+	~VertexAttribute() {
+
 	}
 
-	VertexElement& operator=(const VertexElement& rhs) {
+	VertexAttribute& operator=(const VertexAttribute& rhs) {
 		m_semantic = rhs.m_semantic;
 		m_format = rhs.m_format;
 		m_offset = rhs.m_offset;
 		m_size = rhs.m_size;
-		//		m_data     = rhs.m_data;
 		m_vbo = rhs.m_vbo;
 		return *this;
 	}
 
-	static uint8_t getFormatSize(VertexElementFormat format) {
+	static uint8_t getFormatSize(VertexAttributeFormat format) {
 		switch (format) {
 		case VertexFormat_FLOAT1:
 			return sizeof(float);
@@ -97,7 +94,7 @@ typedef struct VertexElement {
 			return 0;
 		}
 	}
-	static GLenum getFormatType(VertexElementFormat format) {
+	static GLenum getFormatType(VertexAttributeFormat format) {
 		switch (format) {
 		case VertexFormat_FLOAT1:
 		case VertexFormat_FLOAT2:
@@ -118,7 +115,7 @@ typedef struct VertexElement {
 		}
 	}
 
-	static uint8_t getFormatElementCount(VertexElementFormat format) {
+	static uint8_t getFormatElementCount(VertexAttributeFormat format) {
 		switch (format) {
 		case VertexFormat_FLOAT1:
 		case VertexFormat_SHORT1:
@@ -140,43 +137,6 @@ typedef struct VertexElement {
 		}
 	}
 
-	/*
-	 void updateSubData(uint32_t offset, uint32_t count, void* data) {
-	 float* fdst, *fsrc;
-	 short* udst, *usrc;
-	 uint8_t* bdst, *bsrc;
-
-	 if (m_data) {
-	 switch (m_format) {
-	 case VertexFormat_FLOAT1:
-	 case VertexFormat_FLOAT2:
-	 case VertexFormat_FLOAT3:
-	 case VertexFormat_FLOAT4:
-	 fdst = (float*) m_data;
-	 fsrc = (float*) data;
-	 memcpy(fdst, fsrc, getFormatSize(m_format)*count);
-	 break;
-	 case VertexFormat_SHORT1:
-	 case VertexFormat_SHORT2:
-	 case VertexFormat_SHORT3:
-	 case VertexFormat_SHORT4:
-	 udst = (short*) m_data;
-	 usrc = (short*) data;
-	 memcpy(udst, usrc, getFormatSize(m_format)*count);
-	 break;
-	 case VertexFormat_UBYTE3:
-	 case VertexFormat_UBYTE4:
-	 bdst = (uint8_t*) m_data;
-	 bsrc = (uint8_t*) data;
-	 memcpy(bdst, bsrc, getFormatSize(m_format)*count);
-	 break;
-	 default:
-	 //TODO: error reporting
-	 break;
-	 }
-	 }
-	 }
-	 */
 	void updateDataAtIndex(uint32_t index, void* data) {
 		float* fdst, *fsrc;
 		short* udst, *usrc;
@@ -189,7 +149,7 @@ typedef struct VertexElement {
 			case VertexFormat_FLOAT3:
 			case VertexFormat_FLOAT4:
 				fdst = (float*) mapped;
-				fdst += (index*getFormatElementCount(m_format));
+				fdst += (index * getFormatElementCount(m_format));
 				fsrc = (float*) data;
 				for (int i = 0; i < getFormatElementCount(m_format); i++) {
 					*fdst++ = *fsrc++;
@@ -200,7 +160,7 @@ typedef struct VertexElement {
 			case VertexFormat_SHORT3:
 			case VertexFormat_SHORT4:
 				udst = (short*) mapped;
-				udst += (index*getFormatElementCount(m_format));
+				udst += (index * getFormatElementCount(m_format));
 				usrc = (short*) data;
 				for (int i = 0; i < getFormatElementCount(m_format); i++) {
 					*udst++ = *usrc++;
@@ -209,7 +169,7 @@ typedef struct VertexElement {
 			case VertexFormat_UBYTE3:
 			case VertexFormat_UBYTE4:
 				bdst = (uint8_t*) mapped;
-				bdst += (index*getFormatElementCount(m_format));
+				bdst += (index * getFormatElementCount(m_format));
 				bsrc = (uint8_t*) data;
 				for (int i = 0; i < getFormatElementCount(m_format); i++) {
 					*bdst++ = *bsrc++;
@@ -223,85 +183,72 @@ typedef struct VertexElement {
 		}
 	}
 
-	//	void* _allocateArrayForElement(uint32_t count) {
-	//		m_vbo->allocate(count);
-	//		return m_vbo->mapData();
-	//		switch (m_format) {
-	//		case VertexFormat_FLOAT1:
-	//		case VertexFormat_FLOAT2:
-	//		case VertexFormat_FLOAT3:
-	//		case VertexFormat_FLOAT4:
-	//			m_data = new float[count * VertexElement::getFormatElementCount(m_format)];
-	//			break;
-	//		case VertexFormat_SHORT1:
-	//		case VertexFormat_SHORT2:
-	//		case VertexFormat_SHORT3:
-	//		case VertexFormat_SHORT4:
-	//			m_data = new short[count * VertexElement::getFormatElementCount(m_format)];
-	//			break;
-	//		case VertexFormat_UBYTE3:
-	//		case VertexFormat_UBYTE4:
-	//			m_data = new uint8_t[count * VertexElement::getFormatElementCount(m_format)];
-	//			break;
-	//		default:
-	//			m_data = 0;
-	//		}
-	//		return m_data;
-	//	}
-	/*
-	 void _deleteData() {
-	 if (m_data) {
-	 switch (m_format) {
-	 case VertexFormat_FLOAT1:
-	 case VertexFormat_FLOAT2:
-	 case VertexFormat_FLOAT3:
-	 case VertexFormat_FLOAT4:
-	 delete[] (float*) m_data;
+} VertexAttribute;
+typedef shared_ptr<VertexAttribute> VertexAttributePtr;
 
-	 case VertexFormat_SHORT1:
-	 case VertexFormat_SHORT2:
-	 case VertexFormat_SHORT3:
-	 case VertexFormat_SHORT4:
-	 delete[] (short*) m_data;
+enum VertexFormatTemplates {
+	/** x, y, z position */
+	VF_V3 = 1,
 
-	 case VertexFormat_UBYTE3:
-	 case VertexFormat_UBYTE4:
-	 delete[] (uint8_t*) m_data;
-	 default:
-	 //TODO:error reporting
-	 return;
-	 }
-	 }
-	 }
-	 */
+	/** x, y position */
+	VF_V2 = 2,
 
-} VertexElement;
-typedef shared_ptr<VertexElement> VertexElementPtr;
+	/** RGBA color */
+	VF_C4 = 4,
+
+	/** normal */
+	VF_N3 = 8,
+
+	/** u, v coordinates */
+	VF_T2 = 16,
+
+	/** x, y, z position, RGBA color */
+	VF_V3_C4 = VF_V3 | VF_C4,
+
+	/** x, y, z position, normal, RGBA color */
+	VF_V3_N3_C4 = VF_V3 | VF_N3 | VF_C4,
+
+	/** x, y, z position, normal, uv */
+	VF_V3_N3_T2 = VF_V3 | VF_N3 | VF_T2,
+
+	/** x, y, z position, normal, uv, RGBA color */
+	VF_V3_N3_T2_C4 = VF_V3 | VF_N3 | VF_T2 | VF_C4
+};
 
 class VertexFormat {
 public:
 	VertexFormat();
 	~VertexFormat();
 
+	/**
+	 * Creates a new VertexFormat based on a template of the vertex attributes as specified in the given
+	 * VertexFormatTemplates parameter.
+	 *
+	 * @param vfTemplate specifies the type and number of vertex attributes
+	 * @return pointer to a new VertexFormat instance
+	 */
+	static VertexFormat* create(enum VertexFormatTemplates vfTemplate);
+
 	VertexFormat& operator=(const VertexFormat& rhs);
-	VertexElement* addElement(VertexElement* ve);
-	VertexElement* addElement(VertexElementSemantic semantic, VertexElementFormat format, uint32_t offset, void* data);
-	VertexElement* addElement(VertexElementSemantic semantic, VertexElementFormat format);
-	VertexElement* getElementByIndex(uint8_t numElement);
-	VertexElement* getElementBySemantic(VertexElementSemantic semantic);
+	VertexAttribute* addAttribute(VertexAttribute* ve);
+	VertexAttribute* addAttribute(VertexAttributeSemantic semantic, VertexAttributeFormat format, uint32_t offset,
+			void* data);
+	VertexAttribute* addAttribute(VertexAttributeSemantic semantic, VertexAttributeFormat format);
+	VertexAttribute* getAttributeByIndex(uint8_t numElement) const;
+	VertexAttribute* getAttributeBySemantic(VertexAttributeSemantic semantic) const;
 	uint8_t getNumElements() const;
 
 	void bindData() {
-		for (uint8_t i = 0; i < m_numElements; i++) {
-			VertexElement* ve = getElementByIndex(i);
+		for (uint8_t i = 0; i < m_numAttributes; i++) {
+			VertexAttribute* ve = getAttributeByIndex(i);
 			ve->m_vbo->uploadData();
 		}
 	}
 
-	void printData();
+	//	void printData();
 private:
-	uint8_t m_numElements;
-	VertexElementPtr m_elements[MAX_VERTEX_ELEMENTS];
+	uint8_t m_numAttributes;
+	VertexAttributePtr m_attributes[MAX_VERTEX_ELEMENTS];
 };
 typedef shared_ptr<VertexFormat> VertexFormatPtr;
 

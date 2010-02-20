@@ -2,6 +2,7 @@
 #define	_RENDERABLE_H
 
 #include "AABB.h"
+#include "VertexFormat.h"
 #include "Material.h"
 #include "PinholeCamera.h"
 #include <list>
@@ -11,11 +12,12 @@ protected:
 	Matrix4f m_transform;
 	AABB<float> m_bounds;
 	MaterialPtr m_material;
+	VertexFormatPtr m_vf;
 
 public:
 
 	Renderable() :
-		m_transform(), m_bounds(), m_material() {
+		m_transform(), m_bounds(), m_material(), m_vf() {
 		m_transform.identity();
 	}
 
@@ -50,6 +52,13 @@ public:
 
 	}
 
+	virtual VertexFormatPtr getVertexFormat() {
+		return m_vf;
+	}
+//	virtual void setVertexFormat(VertexFormatPtr vf) {
+//		m_vf = vf;
+//	}
+
 	virtual AABB<float>& getBounds() {
 		return m_bounds;
 	}
@@ -76,7 +85,7 @@ public:
 	//virtual uint32_t getRenderLayer() = 0;
 };
 
-typedef shared_ptr<Renderable> IRenderablePtr;
+typedef shared_ptr<Renderable> RenderablePtr;
 typedef std::list<Renderable*> RenderablesList;
 
 #endif	/* _RENDERABLE_H */

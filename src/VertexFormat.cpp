@@ -9,59 +9,107 @@
 #include "VertexFormat.h"
 
 VertexFormat::VertexFormat() :
-	m_numElements(0), m_elements() {
+	m_numAttributes(0), m_attributes() {
 
 }
 
 VertexFormat::~VertexFormat() {
 }
 
+VertexFormat* VertexFormat::create(enum VertexFormatTemplates vfTemplate) {
+	VertexFormat* vf = 0;
+	switch (vfTemplate) {
+	case VF_V2:
+		vf = new VertexFormat();
+		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT2);
+		return vf;
+		break;
+	case VF_V3:
+		vf = new VertexFormat();
+		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+		return vf;
+		break;
+	case VF_V3_C4:
+		vf = new VertexFormat();
+		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_Color, VertexFormat_FLOAT4);
+		return vf;
+		break;
+	case VF_V3_N3_C4:
+		vf = new VertexFormat();
+		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_Color, VertexFormat_FLOAT4);
+		return vf;
+		break;
+	case VF_V3_N3_T2:
+		vf = new VertexFormat();
+		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_TexCoord0, VertexFormat_FLOAT2);
+		return vf;
+		break;
+	case VF_V3_N3_T2_C4:
+		vf = new VertexFormat();
+		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_TexCoord0, VertexFormat_FLOAT2);
+		vf->addAttribute(Vertex_Color, VertexFormat_FLOAT4);
+		return vf;
+		break;
+	default:
+		SAFE_THROW(GLException(E_BADARG, "Unknown vertex format template"))
+		;
+	}
+	return 0;
+}
+
 VertexFormat& VertexFormat::operator=(const VertexFormat& rhs) {
-	m_numElements = rhs.m_numElements;
-	for (uint8_t i = 0; i < m_numElements; i++) {
+	m_numAttributes = rhs.m_numAttributes;
+	for (uint8_t i = 0; i < m_numAttributes; i++) {
 		// copy pointers
-		m_elements[i] = rhs.m_elements[i];
+		m_attributes[i] = rhs.m_attributes[i];
 	}
 	return *this;
 }
 
-VertexElement* VertexFormat::addElement(VertexElement* ve) {
-	m_elements[m_numElements] = VertexElementPtr(ve);
-	++m_numElements;
+VertexAttribute* VertexFormat::addAttribute(VertexAttribute* ve) {
+	m_attributes[m_numAttributes] = VertexAttributePtr(ve);
+	++m_numAttributes;
 	return ve;
 }
 
-VertexElement* VertexFormat::addElement(VertexElementSemantic semantic, VertexElementFormat format, uint32_t offset,
-		void* data) {
-	assert(m_numElements <= MAX_VERTEX_ELEMENTS);
-	return this->addElement(new VertexElement(semantic, format, offset, data));
+VertexAttribute* VertexFormat::addAttribute(VertexAttributeSemantic semantic, VertexAttributeFormat format,
+		uint32_t offset, void* data) {
+	assert(m_numAttributes <= MAX_VERTEX_ELEMENTS);
+	return this->addAttribute(new VertexAttribute(semantic, format, offset, data));
 }
 
-VertexElement* VertexFormat::addElement(VertexElementSemantic semantic, VertexElementFormat format) {
-	assert(m_numElements <= MAX_VERTEX_ELEMENTS);
-	return this->addElement(new VertexElement(semantic, format, 0, 0));
+VertexAttribute* VertexFormat::addAttribute(VertexAttributeSemantic semantic, VertexAttributeFormat format) {
+	assert(m_numAttributes <= MAX_VERTEX_ELEMENTS);
+	return this->addAttribute(new VertexAttribute(semantic, format, 0, 0));
 }
 
-VertexElement* VertexFormat::getElementByIndex(uint8_t numElement) {
+VertexAttribute* VertexFormat::getAttributeByIndex(uint8_t numElement) const {
 	assert(numElement < MAX_VERTEX_ELEMENTS);
-	return m_elements[numElement].get();
+	return m_attributes[numElement].get();
 }
 
-VertexElement* VertexFormat::getElementBySemantic(VertexElementSemantic semantic) {
-	for (uint8_t i = 0; i < m_numElements; i++) {
-		if (m_elements[i]->m_semantic == semantic) {
-			return m_elements[i].get();
+VertexAttribute* VertexFormat::getAttributeBySemantic(VertexAttributeSemantic semantic) const {
+	for (uint8_t i = 0; i < m_numAttributes; i++) {
+		if (m_attributes[i]->m_semantic == semantic) {
+			return m_attributes[i].get();
 		}
 	}
 	return 0;
 }
 
 uint8_t VertexFormat::getNumElements() const {
-	return m_numElements;
+	return m_numAttributes;
 }
 
-void VertexFormat::printData() {
-	for (uint8_t i = 0; i < m_numElements; i++) {
-		m_elements[i];
-	}
-}
+//void VertexFormat::printData() {
+//	for (uint8_t i = 0; i < m_numAttributes; i++) {
+//		m_attributes[i];
+//	}
+//}

@@ -15,6 +15,8 @@ class MeshModel: public Renderable {
 
 protected:
 	MeshPtr     m_mesh;
+	GLuint      m_vao;
+	bool        m_hasBindedOnce;
 
 public:
 	MeshModel(Mesh* mesh);
@@ -33,5 +35,6 @@ public:
 private:
 	void _updateBounds();
 };
+typedef shared_ptr<MeshModel> MeshModelPtr;
 
 #endif /* MESHMODEL_H_ */

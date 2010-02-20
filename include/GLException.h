@@ -35,15 +35,20 @@ class GLException: public std::exception {
 
 private:
 	enum ErrorCode m_code;
+	const char*    m_details;
 
 public:
-	GLException(enum ErrorCode code) :
-		std::exception(), m_code(code) {
+	GLException(enum ErrorCode code, const char* details = 0) :
+		std::exception(), m_code(code), m_details(details) {
 
 	}
 
 	virtual const char* what() const throw () {
 		return errorCodeToString(m_code);
+	}
+
+	const char* details() const {
+		return m_details;
 	}
 
 private:

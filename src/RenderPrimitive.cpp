@@ -10,24 +10,26 @@
 
 template<typename T>
 RenderPrimitive<T>::RenderPrimitive() :
-	m_primitiveType(), m_numPrimitives(0), m_numVertices(0), m_numIndices(0), m_hasIndices(false), m_vf(),
-			m_isSpecified(false) {
-
+	Renderable(), m_primitiveType(), m_numPrimitives(0), m_numVertices(0), m_numIndices(0), m_hasIndices(false),
+			m_vf(), m_isSpecified(false), m_hasBindedOnce(false) {
+	glGenVertexArrays(1, &m_vao);
 }
 
 template<typename T>
 RenderPrimitive<T>::~RenderPrimitive() {
-
+	glDeleteVertexArrays(1, &m_vao);
 }
 
 template<typename T>
-void RenderPrimitive<T>::specifyVertexFormat(const VertexFormat& vf) {
-	m_vf.reset(new VertexFormat());
-	(*m_vf) = vf;
+void RenderPrimitive<T>::specifyVertexFormat(VertexFormatPtr vf) {
+	m_hasBindedOnce = false;
+	//	m_vf.reset(new VertexFormat());
+	//	(*m_vf) = vf;
+	m_vf = vf;
 
 	// reset counters for each vertex element
 	for (uint8_t i = 0; i < m_vf->getNumElements(); i++) {
-		VertexElement* ve = m_vf->getElementByIndex(i);
+		VertexAttribute* ve = m_vf->getAttributeByIndex(i);
 		m_sizePerSemantic[ve->m_semantic] = 0;
 	}
 	m_isSpecified = false;
@@ -36,10 +38,20 @@ void RenderPrimitive<T>::specifyVertexFormat(const VertexFormat& vf) {
 template<typename T>
 void RenderPrimitive<T>::beginGeometry(uint32_t numPrimitives) {
 	assert(m_vf);
+
+	m_hasBindedOnce = false;
+
+	// reset counters for each vertex element
+	for (uint8_t i = 0; i < m_vf->getNumElements(); i++) {
+		VertexAttribute* ve = m_vf->getAttributeByIndex(i);
+		m_sizePerSemantic[ve->m_semantic] = 0;
+	}
+	m_isSpecified = false;
+
 	m_numPrimitives = numPrimitives;
 	m_numVertices = m_primitiveType.numVerticesForPrimitives(m_numPrimitives);
 	for (uint8_t i = 0; i < m_vf->getNumElements(); i++) {
-		VertexElement* ve = m_vf->getElementByIndex(i);
+		VertexAttribute* ve = m_vf->getAttributeByIndex(i);
 		ve->m_vbo->allocate(m_numVertices);
 	}
 }
@@ -47,7 +59,7 @@ void RenderPrimitive<T>::beginGeometry(uint32_t numPrimitives) {
 template<typename T>
 bool RenderPrimitive<T>::endGeometry() {
 	// verify that the position semantic has been specified
-	std::map<VertexElementSemantic, uint32_t>::const_iterator it = m_sizePerSemantic.find(Vertex_Pos);
+	std::map<VertexAttributeSemantic, uint32_t>::const_iterator it = m_sizePerSemantic.find(Vertex_Pos);
 	assert(it != m_sizePerSemantic.end());
 	if (it == m_sizePerSemantic.end()) {
 		return false;
@@ -64,13 +76,13 @@ bool RenderPrimitive<T>::endGeometry() {
 
 	// upload vertex attributes
 	for (uint8_t i = 0; i < m_vf->getNumElements(); i++) {
-		VertexElement* ve = m_vf->getElementByIndex(i);
+		VertexAttribute* ve = m_vf->getAttributeByIndex(i);
 		ve->m_vbo->uploadData();
 	}
 
 	// update bounding box
 	m_bounds = AABB<float>::EmptyAABB();
-	VertexElement* ve = m_vf->getElementBySemantic(Vertex_Pos);
+	VertexAttribute* ve = m_vf->getAttributeBySemantic(Vertex_Pos);
 	//TODO: !IMPORTANT! complete this...
 	// data = vbo->mapData()
 	// for d in data {
@@ -85,18 +97,18 @@ bool RenderPrimitive<T>::endGeometry() {
 }
 
 template<typename T>
-void RenderPrimitive<T>::vertexAttrib(VertexElementSemantic semantic, void* data) {
+void RenderPrimitive<T>::vertexAttrib(VertexAttributeSemantic semantic, void* data) {
 	assert(m_vf);
-	std::map<VertexElementSemantic, uint32_t>::const_iterator it = m_sizePerSemantic.find(semantic);
+	std::map<VertexAttributeSemantic, uint32_t>::const_iterator it = m_sizePerSemantic.find(semantic);
 	assert(it != m_sizePerSemantic.end());
 	if (it == m_sizePerSemantic.end()) {
-		throw GLException(E_BADARG);
+		SAFE_THROW(GLException(E_BADARG, "No such semantic"));
 	}
 
-	VertexElement* ve = m_vf->getElementBySemantic(semantic);
+	VertexAttribute* ve = m_vf->getAttributeBySemantic(semantic);
 	assert(ve);
 	if (!ve) {
-		throw GLException(E_BADSTATE);
+		SAFE_THROW(GLException(E_BADSTATE, "No VertexAttribute for semantic"));
 	}
 
 	// parameter data points to a single vertex attribute
@@ -106,23 +118,24 @@ void RenderPrimitive<T>::vertexAttrib(VertexElementSemantic semantic, void* data
 		ve->updateDataAtIndex(index, data);
 		++m_sizePerSemantic[semantic];
 	} else {
-		throw GLException(E_BADOP);
+		SAFE_THROW(GLException(E_BADOP, "Too many values for a vertex attribute"));
 	}
 }
 
 template<typename T>
-void RenderPrimitive<T>::vertexAttribArray(VertexElementSemantic semantic, void* data, uint32_t offset, uint32_t count) {
+void RenderPrimitive<T>::vertexAttribArray(VertexAttributeSemantic semantic, void* data, uint32_t offset,
+		uint32_t count) {
 	assert(m_vf);
-	std::map<VertexElementSemantic, uint32_t>::const_iterator it = m_sizePerSemantic.find(semantic);
+	std::map<VertexAttributeSemantic, uint32_t>::const_iterator it = m_sizePerSemantic.find(semantic);
 	assert(it != m_sizePerSemantic.end());
 	if (it == m_sizePerSemantic.end()) {
-		throw GLException(E_BADARG);
+		SAFE_THROW(GLException(E_BADARG, "No such semantic"));
 	}
 
-	VertexElement* ve = m_vf->getElementBySemantic(semantic);
+	VertexAttribute* ve = m_vf->getAttributeBySemantic(semantic);
 	assert(ve);
 	if (!ve) {
-		throw GLException(E_BADSTATE);
+		SAFE_THROW(GLException(E_BADSTATE, "No VertexAttribute for semantic"));
 	}
 
 	// a zero size implies all vertices
@@ -135,7 +148,7 @@ void RenderPrimitive<T>::vertexAttribArray(VertexElementSemantic semantic, void*
 		ve->m_vbo->updateSubData(offset, count, data);
 		m_sizePerSemantic[semantic] += count;
 	} else {
-		throw GLException(E_BADOP);
+		SAFE_THROW(GLException(E_BADOP, "Too many values for a vertex attribute"));
 	}
 }
 
@@ -143,8 +156,13 @@ template<typename T>
 void RenderPrimitive<T>::renderGeometry() {
 	assert(m_isSpecified);
 	if (m_isSpecified) {
-		m_vf->bindData();
+		glBindVertexArray(m_vao);
+		if (!m_hasBindedOnce) {
+			m_vf->bindData();
+			m_hasBindedOnce = true;
+		}
 		glDrawArrays(m_primitiveType.getGLDrawType(), 0, m_numVertices);
+		glBindVertexArray(0);
 	}
 }
 
@@ -152,4 +170,5 @@ void RenderPrimitive<T>::renderGeometry() {
 #ifndef USE_EXPORT_KEYWORD
 template class RenderPrimitive<QuadStripPrimitiveType> ;
 template class RenderPrimitive<QuadsPrimitiveType> ;
+template class RenderPrimitive<TrianglesPrimitiveType> ;
 #endif

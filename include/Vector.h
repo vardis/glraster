@@ -10,7 +10,8 @@ class Vec2 {
 public:
 	T x, y;
 
-	Vec2() {
+	Vec2() :
+		x(), y() {
 	}
 
 	Vec2(T _v) :
@@ -125,12 +126,22 @@ class Vec3 {
 public:
 	T x, y, z;
 
+	static Vec3<T> Zero;
 	static Vec3<T> Front;
 
-	Vec3() {
+	static Vec3<T> X_Axis;
+	static Vec3<T> Y_Axis;
+	static Vec3<T> Z_Axis;
+
+	static Vec3<T> X_Neg_Axis;
+	static Vec3<T> Y_Neg_Axis;
+	static Vec3<T> Z_Neg_Axis;
+
+	Vec3() :
+		x(), y(), z() {
 	}
 
-	Vec3(T _v) :
+	explicit Vec3(T _v) :
 		x(_v), y(_v), z(_v) {
 	}
 
@@ -196,6 +207,10 @@ public:
 		}
 	}
 
+	bool approximatelyEqual(const Vec3<T>& _v) {
+		return (fabs(x - _v.x) < 0.0001f) && (fabs(y - _v.y) < 0.0001f) && (fabs(z - _v.z) < 0.0001f);
+	}
+
 	Vec3<T>& operator=(const Vec3<T>& _v) {
 		x = _v.x;
 		y = _v.y;
@@ -255,6 +270,17 @@ public:
 	Vec3<T> cross(const Vec3<T>& _v) const {
 		return Vec3<T> ((y * _v.z) - (z * _v.y), (z * _v.x) - (x * _v.z), (x * _v.y) - (y * _v.x));
 	}
+
+	void memCpyTo(T* ptrTo, size_t repeatCount = 1) {
+		for (size_t i = 0; i < repeatCount; i++) {
+			*ptrTo++ = x;
+			*ptrTo++ = y;
+			*ptrTo++ = z;
+		}
+	}
+
+	template<typename U>
+	friend bool operator==(const Vec3<U>& lhs, const Vec3<U>& rhs);
 
 	template<typename U>
 	friend Vec3<U> operator*(float _r, const Vec3<U>& _v);

@@ -12,6 +12,20 @@
 #include "VertexFormat.h"
 #include "VertexIndexBuffer.h"
 
+struct TrianglesPrimitiveType {
+	GLenum getGLDrawType() const {
+		return GL_TRIANGLES;
+	}
+
+	uint8_t numVerticesForPrimitives(uint32_t numPrimitives) const {
+		return 3 * numPrimitives;
+	}
+
+	bool hasIndices() const {
+		return false;
+	}
+};
+
 struct QuadsPrimitiveType {
 	GLenum getGLDrawType() const {
 		return GL_QUADS;
@@ -52,22 +66,24 @@ private:
 	uint32_t m_numIndices;
 	bool m_hasIndices;
 	VertexFormatPtr m_vf;
+	GLuint m_vao;
 
 private:
 	bool m_isSpecified;
-	std::map<VertexElementSemantic, uint32_t> m_sizePerSemantic;
+	bool m_hasBindedOnce;
+	std::map<VertexAttributeSemantic, uint32_t> m_sizePerSemantic;
 
 public:
 	RenderPrimitive();
 	virtual ~RenderPrimitive();
 
 	virtual void renderGeometry();
-	void specifyVertexFormat(const VertexFormat & vf);
-	void specifyVertexElement(VertexElementSemantic semantic, VertexElementFormat format);
+	void specifyVertexFormat(VertexFormatPtr vf);
+	void specifyVertexAttribute(VertexAttributeSemantic semantic, VertexAttributeFormat format);
 	void beginGeometry(uint32_t numPrimitives);
 	bool endGeometry();
-	void vertexAttrib(VertexElementSemantic semantic, void *data);
-	void vertexAttribArray(VertexElementSemantic semantic, void *data, uint32_t offset = 0, uint32_t count = 0);
+	void vertexAttrib(VertexAttributeSemantic semantic, void *data);
+	void vertexAttribArray(VertexAttributeSemantic semantic, void *data, uint32_t offset = 0, uint32_t count = 0);
 
 	bool hasIndices() const {
 		return m_hasIndices;
@@ -93,7 +109,7 @@ public:
 		return m_primitiveType;
 	}
 
-	std::map<VertexElementSemantic, uint32_t> getSizePerSemantic() const {
+	std::map<VertexAttributeSemantic, uint32_t> getSizePerSemantic() const {
 		return m_sizePerSemantic;
 	}
 
@@ -125,7 +141,7 @@ public:
 		this->m_primitiveType = m_primitiveType;
 	}
 
-	void setSizePerSemantic(std::map<VertexElementSemantic, uint32_t> m_sizePerSemantic) {
+	void setSizePerSemantic(std::map<VertexAttributeSemantic, uint32_t> m_sizePerSemantic) {
 		this->m_sizePerSemantic = m_sizePerSemantic;
 	}
 

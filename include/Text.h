@@ -21,12 +21,11 @@ private:
 	Vec2<uint> m_pos;
 	Colour     m_colour;
 	String     m_text;
-	RenderPrimitive<QuadsPrimitiveType> m_geom;
+	RenderPrimitive<TrianglesPrimitiveType> m_geom;
 	bool       m_updateGeom;
 
 public:
-	Text(TTFontPtr font);
-	Text(TTFont* font);
+	explicit Text(TTFontPtr font);
 	virtual ~Text();
 
 	TTFontPtr getFont() {
@@ -61,5 +60,6 @@ public:
 	virtual void renderGeometry();
 	void render(uint16_t x, uint16_t y, uint8_t* utf8Text, const Colour& colour = Colour::WHITE);
 };
+typedef shared_ptr<Text> TextPtr;
 
 #endif /* TEXT_H_ */

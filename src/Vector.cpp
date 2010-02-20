@@ -2,7 +2,33 @@
 #include "Vector.h"
 
 template<typename T>
+Vec3<T> Vec3<T>::Zero(0.0f, 0.0f, 0.0f);
+
+template<typename T>
 Vec3<T> Vec3<T>::Front(0.0f, 0.0f, 1.0f);
+
+template<typename T>
+Vec3<T> Vec3<T>::X_Axis(1.0f, 0.0f, 0.0f);
+
+template<typename T>
+Vec3<T> Vec3<T>::Y_Axis(0.0f, 1.0f, 0.0f);
+
+template<typename T>
+Vec3<T> Vec3<T>::Z_Axis(0.0f, 0.0f, 1.0f);
+
+template<typename T>
+Vec3<T> Vec3<T>::X_Neg_Axis(-1.0f, 0.0f, 0.0f);
+
+template<typename T>
+Vec3<T> Vec3<T>::Y_Neg_Axis(0.0f, -1.0f, 0.0f);
+
+template<typename T>
+Vec3<T> Vec3<T>::Z_Neg_Axis(0.0f, 0.0f, -1.0f);
+
+template<typename T>
+bool operator==(const Vec3<T>& lhs, const Vec3<T>& rhs) {
+	lhs.approximatelyEqual(rhs);
+}
 
 template<typename T>
 Vec3<T> operator*(float _r, const Vec3<T>& _v) {

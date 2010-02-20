@@ -17,6 +17,7 @@
 #include "TTFont.h"
 #include "Text.h"
 #include "GLXTimer.h"
+#include "ShaderGenerator.h"
 
 #define ILUT_USE_OPENGL
 #include <IL/il.h>
@@ -32,19 +33,11 @@ bool camMoved = false;
 GLfloat camX = 0.0f, camY = 0.0f, camZ = -1.0f;
 GLfloat focusX = 0.0f, focusY = 0.0f, focusZ = 1.0f;
 
-GLuint g_texID;
-
 // In degrees
 GLfloat azimuth = 90.0f;
 GLfloat elevation = 90.0f;
 
 float yaw, pitch, roll;
-
-// Vertex Buffers IDs
-GLuint triangleVBO;
-GLuint coloursVBO;
-GLuint indicesVBO;
-GLuint meshVBO;
 
 GLfloat g_ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
 GLfloat g_diffuseLight[] = { 0.7f, 0.7f, 0.7f, 1.0f };
@@ -63,11 +56,14 @@ long g_lastTime;
 MaterialDB g_matDB;
 Mesh* bobMesh;
 MeshModel* bobModel;
+MeshModel* maleModel;
 Entity* bobEntity;
 Entity* billboardEntity;
 Entity* multiMat;
 Entity* planeEntity;
 Entity* quadStripEnt;
+Entity* maleEntity;
+
 RenderTargetTexture* g_planeTextureRT;
 PinholeCameraPtr g_camera;
 ViewportPtr g_viewport;
@@ -75,8 +71,8 @@ SceneManager scene;
 RenderablesRasterizer* g_rasterizer;
 ILTextureManager* g_texMgr;
 
-TTFont* g_font;
-Text* g_text;
+TTFontPtr g_font;
+TextPtr g_text;
 
 void displayFunc(void);
 void reshapeFunc(int width, int height);
@@ -95,39 +91,53 @@ void rtt(RenderTargetTexture* rt);
 void render(PinholeCameraPtr camera, ViewportPtr viewport);
 
 int main(int argc, char** argv) {
-	glutInit(&argc, argv);
-	glutInitWindowSize(640, 480);
-	glutInitWindowPosition(10, 10);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE | GLUT_ALPHA | GLUT_DEPTH);
-	int mainWinID = glutCreateWindow("mainWin");
 
-	GLenum err = glewInit();
-	if (GLEW_OK != err) {
-		/* Problem: glewInit failed, something is seriously wrong. */
-		std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
+	try {
+		glutInit(&argc, argv);
+		glutInitWindowSize(640, 480);
+		glutInitWindowPosition(10, 10);
+		glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE | GLUT_ALPHA | GLUT_DEPTH);
+
+		glutInitContextVersion (3, 2);
+		glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
+//		glutInitContextFlags (GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
+
+
+		int mainWinID = glutCreateWindow("mainWin");
+
+		GLenum err = glewInit();
+		if (GLEW_OK != err) {
+			/* Problem: glewInit failed, something is seriously wrong. */
+			std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
+			return 1;
+		}
+
+		glutSetWindow(mainWinID);
+		glutSetWindowTitle("OpenGL Tutor ver. 0.0.0.1");
+
+		// set callbacks
+		glutDisplayFunc(displayFunc);
+		glutReshapeFunc(reshapeFunc);
+		glutKeyboardFunc(keyboardFunc);
+		glutMotionFunc(mouseMotionFunc);
+		glutPassiveMotionFunc(mousePassiveMotionFunc);
+		glutSpecialFunc(specialKeyFunc);
+		glutIdleFunc(idleFunc);
+		glutCloseFunc(closeFunc);
+
+		initialize();
+		if (!GLEW_ARB_vertex_buffer_object) {
+			std::cerr << "GLEW_ARB_vertex_buffer_object not supported" << std::endl;
+			exit(1);
+		}
+
+		glutMainLoop();
+		glutDestroyWindow(mainWinID);
+
+	} catch (GLException& e) {
+		std::cerr << "Caught a GLException: " << e.what() << std::endl;
+		std::cerr << "Details: " << e.details() << std::endl;
 	}
-
-	glutSetWindow(mainWinID);
-	glutSetWindowTitle("OpenGL Tutor ver. 0.0.0.1");
-
-	// set callbacks
-	glutDisplayFunc(displayFunc);
-	glutReshapeFunc(reshapeFunc);
-	glutKeyboardFunc(keyboardFunc);
-	glutMotionFunc(mouseMotionFunc);
-	glutPassiveMotionFunc(mousePassiveMotionFunc);
-	glutSpecialFunc(specialKeyFunc);
-	glutIdleFunc(idleFunc);
-	glutCloseFunc(closeFunc);
-
-	initialize();
-	if (!GLEW_ARB_vertex_buffer_object) {
-		std::cerr << "GLEW_ARB_vertex_buffer_object not supported" << std::endl;
-		exit(1);
-	}
-
-	glutMainLoop();
-	glutDestroyWindow(mainWinID);
 	return 0;
 }
 
@@ -157,8 +167,6 @@ void initialize() {
 	g_camera->setFov(60.0f);
 	g_camera->setAspectRatio(0.75f);
 
-	glGenTextures(1, &g_texID);
-
 	g_texMgr = new ILTextureManager();
 	g_rasterizer = new RenderablesRasterizer(g_texMgr, &g_matDB);
 	scene.setTextureManager(g_texMgr);
@@ -167,7 +175,7 @@ void initialize() {
 	//	scene.setActiveSkyMapType(Sky_CubeMap);
 	//	scene.setCubeSkyMap("stevecube.jpg");
 
-	g_font = new TTFont();
+	g_font.reset(new TTFont());
 	g_font->setFilename("bluebold.ttf");
 	g_font->addCodepointRange(CodepointRange(32, 166));
 	g_font->setPointSize(3);
@@ -215,21 +223,45 @@ void loadModels() {
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
+	// create male figure mesh
+	ShaderGenerator sg;
+	std::list<Mesh*> maleMeshes = mf.createFromFile("muscular_male_basemesh.obj");
+	maleEntity = new Entity();
+	it = maleMeshes.begin();
+	while (it != maleMeshes.end()) {
+		MeshModel* maleModel = new MeshModel(*it);
+		maleModel->getMaterial()->m_texStack->textures[0]->setMinFilter(TexFilter_Bilinear_Mipmap_Bilinear);
+		maleModel->getMaterial()->m_texStack->textures[0]->setAnisotropy(8);
+		maleModel->getMaterial()->m_texStack->texOutputs[0].mapTo = TexMapTo_Shininess;
+		maleEntity->addRenderable(maleModel);
+
+		maleModel->getMaterial()->m_texStack->texInputs[0].mapping = TexMapInput_ObjectSpace;
+		sg.generateShaders(*maleModel->getMaterial(), *maleModel->getMesh()->getVertexFormat());
+
+		++it;
+	}
+	Matrix4f& m1 = maleEntity->getTransform();
+	m1 = Matrix4f::Scale(0.4f, 0.4f, 0.4f) * m1;
+
+	///////////////////////////////////////////////////////////////////////
+
+	///////////////////////////////////////////////////////////////////////
 	// create billboard of vegetation
 	MaterialPtr billboardMat(new Material());
 	billboardMat->m_name = "billboardMat";
 	billboardMat->m_twoSided = true;
 	billboardMat->m_diffuse.set(1.0f);
 	//	billboardMat->m_fragmentShader = "fs.glsl";
-	billboardMat->m_textures = TextureStackPtr(new TextureStack());
+	billboardMat->m_texStack = TextureStackPtr(new TextureStack());
 
 	Texture* tex = new Texture();
 	tex->m_useMipmaps = true;
 	tex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
 	tex->m_magFilter = TexFilter_Bilinear;
-	g_texMgr->loadTexture("fgrass1_v2_256.png", tex);
-	billboardMat->m_textures->textures[0].reset(tex);
-	billboardMat->m_textures->texOutputs[0].blendOp = TexBlendOp_Multiply;
+	g_texMgr->loadTexture(/*"fgrass1_v2_256.png"*/"waves2.dds", tex);
+
+	billboardMat->m_texStack->textures[0].reset(tex);
+	billboardMat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
 
 	Billboard* bb = new Billboard(Billboard_Spherical, 1.0f, 1.0f);
 	bb->setMaterial(billboardMat);
@@ -240,13 +272,13 @@ void loadModels() {
 	///////////////////////////////////////////////////////////////////////
 	// QuadStrip
 	VertexFormat vf;
-	vf.addElement(Vertex_Pos, VertexFormat_FLOAT3);
-	vf.addElement(Vertex_Normal, VertexFormat_FLOAT3);
-	vf.addElement(Vertex_TexCoord0, VertexFormat_FLOAT2);
+	vf.addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+	vf.addAttribute(Vertex_Normal, VertexFormat_FLOAT3);
+	vf.addAttribute(Vertex_TexCoord0, VertexFormat_FLOAT2);
 
 	RenderPrimitive<QuadStripPrimitiveType>* qs = new RenderPrimitive<QuadStripPrimitiveType> ();
 	qs->setMaterial(billboardMat);
-	qs->specifyVertexFormat(vf);
+	qs->specifyVertexFormat(VertexFormatPtr(VertexFormat::create(VF_V3_N3_T2)));
 	qs->beginGeometry(3);
 
 	float quads_pos[] = { -1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
@@ -271,7 +303,7 @@ void loadModels() {
 
 	///////////////////////////////////////////////////////////////////////
 
-	g_text = new Text(g_font);
+	g_text.reset(new Text(g_font));
 	g_text->setPos(10, 10);
 	g_text->setText("hello");
 
@@ -281,7 +313,7 @@ void loadModels() {
 	quadMat->m_name = "quadMat";
 	quadMat->m_twoSided = true;
 	quadMat->m_diffuse.set(1.0f);
-	quadMat->m_textures = TextureStackPtr(new TextureStack());
+	quadMat->m_texStack = TextureStackPtr(new TextureStack());
 
 	Texture* quadTex = new Texture();
 	quadTex->m_width = quadTex->m_sourceWidth = 512;
@@ -292,7 +324,7 @@ void loadModels() {
 	quadTex->m_magFilter = TexFilter_Bilinear;
 	quadTex->allocate();
 	quadTex->configureGLState();
-	quadMat->m_textures->textures[0].reset(quadTex);
+	quadMat->m_texStack->textures[0].reset(quadTex);
 
 	Mesh* quad = mf.createQuad();
 	quad->setMaterial(quadMat);
@@ -308,220 +340,8 @@ void loadModels() {
 	g_planeTextureRT = new RenderTargetTexture(TexturePtr(quadTex), true, 0);
 	g_planeTextureRT->allocate();
 	///////////////////////////////////////////////////////////////////////
-
-	/*
-	 Assimp::Importer importer;
-	 const aiScene
-	 * model =
-	 importer.ReadFile("data/models/Bob.md5mesh",
-	 aiProcess_FixInfacingNormals  | aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals);
-	 if (!model) {
-	 std::cerr << importer.GetErrorString() << std::endl;
-	 }
-	 aiMesh* mesh = model->mMeshes[0];
-
-	 if (!mesh->HasFaces()) {
-	 std::cerr << "The model has no faces!" << std::endl;
-	 }
-
-	 std::cout << "num vertices: " << mesh->mNumVertices << std::endl;
-
-	 VertexDataArrayPtr vertices(new VertexData[mesh->mNumVertices]);
-	 VertexData* v = vertices.get();
-	 for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
-	 v->x = mesh->mVertices[i].x;
-	 v->y = mesh->mVertices[i].y;
-	 v->z = mesh->mVertices[i].z;
-	 std::cout << "pos: " << v->x << ", " << v->y << ", " << v->z
-	 << std::endl;
-	 if (mesh->HasNormals()) {
-	 v->normal[0] = mesh->mNormals[i].x;
-	 v->normal[1] = mesh->mNormals[i].y;
-	 v->normal[2] = mesh->mNormals[i].z;
-	 }
-	 if (mesh->HasVertexColors(0)) {
-	 v->r = mesh->mColors[0][i].r;
-	 v->g = mesh->mColors[0][i].g;
-	 v->b = mesh->mColors[0][i].b;
-	 v->a = mesh->mColors[0][i].a;
-	 } else {
-	 v->r = v->g = v->b = v->a = 1.0f;
-	 }
-	 std::cout << "col: " << v->r << ", " << v->g << ", " << v->b << ", "
-	 << v->a << std::endl;
-	 if (mesh->HasTextureCoords(0)) {
-	 v->uv[0] = mesh->mTextureCoords[0][i].x;
-	 v->uv[1] = mesh->mTextureCoords[0][i].y;
-	 std::cout << "uv: " << v->uv[0] << ", " << v->uv[1] << std::endl;
-	 } else {
-	 v->uv[0] = v->uv[1] = 0.0f;
-	 }
-	 ++v;
-	 }
-
-	 uint32_t numIndices = 0;
-	 for (uint32_t f = 0; f < mesh->mNumFaces; f++) {
-	 if (mesh->mFaces[f].mNumIndices > 3) {
-	 std::cerr << "Warning: face  " << f
-	 << " has more than 3 vertices and will be skipped"
-	 << std::endl;
-	 } else {
-	 numIndices += mesh->mFaces[f].mNumIndices;
-	 }
-	 }
-	 std::cout << "num indices: " << numIndices << std::endl;
-
-	 IndexArrayPtr indices(new uint32_t[numIndices]);
-	 uint32_t* p = indices.get();
-	 for (uint32_t f = 0; f < mesh->mNumFaces; f++) {
-	 if (mesh->mFaces[f].mNumIndices == 3) {
-	 *p++ = mesh->mFaces[f].mIndices[0];
-	 *p++ = mesh->mFaces[f].mIndices[1];
-	 *p++ = mesh->mFaces[f].mIndices[2];
-	 }
-	 }
-
-	 bobMesh.updateVertexData(vertices, mesh->mNumVertices);
-	 bobMesh.updateIndexData(indices, numIndices);
-
-	 if (model->HasMaterials()) {
-	 aiString name;
-	 aiColor4D color;
-	 float fval;
-	 int ival;
-
-	 std::cout << "Model has material\n";
-	 aiMaterial* mat = model->mMaterials[mesh->mMaterialIndex];
-	 Material& bobMat = *bobMesh.getMaterial();
-
-	 mat->Get(AI_MATKEY_NAME,name) ;
-	 bobMat.m_name.assign(&name.data[0], name.length);
-
-	 mat->Get(AI_MATKEY_COLOR_DIFFUSE,color) ;
-	 bobMat.m_diffuse.set(color.r, color.g, color.b, color.a);
-
-	 mat->Get(AI_MATKEY_COLOR_SPECULAR,color) ;
-	 bobMat.m_specular.set(color.r, color.g, color.b, color.a);
-
-	 mat->Get(AI_MATKEY_COLOR_EMISSIVE,color) ;
-	 bobMat.m_emissive.set(color.r, color.g, color.b, color.a);
-
-	 mat->Get(AI_MATKEY_OPACITY,fval) ;
-	 bobMat.m_opacity = fval;
-
-	 mat->Get(AI_MATKEY_SHININESS,fval) ;
-	 bobMat.m_shininess = fval;
-
-	 mat->Get(AI_MATKEY_TWOSIDED,ival) ;
-	 bobMat.m_twoSided = ival;
-
-	 TextureStack* texStack = new TextureStack();
-	 bobMat.m_textures = TextureStackPtr(texStack);
-
-	 for (uint8_t t = 0; t < mat->GetTextureCount(aiTextureType_DIFFUSE); t++) {
-	 aiString texPath;
-	 aiTextureMapping texMapping;
-	 unsigned int uvIndex;
-	 float blend;
-	 aiTextureOp texOp;
-	 aiTextureMapMode texWrapMode;
-
-	 if (AI_SUCCESS == mat->GetTexture(aiTextureType_DIFFUSE, t,
-	 &texPath, &texMapping, &uvIndex, &blend, &texOp,
-	 &texWrapMode)) {
-	 std::cout << "loading texture " << &texPath.data[0] << std::endl;
-	 Texture* tex = new Texture();
-	 tex->filename = &texPath.data[0];
-	 tex->minFilter = TexFilter_Linear;
-	 tex->magFilter = TexFilter_Linear;
-	 tex->useMipmaps = true;
-	 switch (texMapping) {
-	 case aiTextureMapping_BOX:
-	 texStack->texInputs[0].mapping = TexMapInput_Cube;
-	 break;
-	 case aiTextureMapping_CYLINDER:
-	 texStack->texInputs[0].mapping = TexMapInput_Cylindrical;
-	 break;
-	 case aiTextureMapping_PLANE:
-	 texStack->texInputs[0].mapping = TexMapInput_Flat;
-	 break;
-	 case aiTextureMapping_SPHERE:
-	 texStack->texInputs[0].mapping = TexMapInput_Spherical;
-	 break;
-	 case aiTextureMapping_UV:
-	 default:
-	 texStack->texInputs[0].mapping = TexMapInput_UV;
-	 }
-
-	 switch (texOp) {
-	 case aiTextureOp_Add:
-	 texStack->texOutputs[0].blendOp = TexBlendOp_Add;
-	 break;
-	 case aiTextureOp_Subtract:
-	 texStack->texOutputs[0].blendOp = TexBlendOp_Sub;
-	 break;
-	 case aiTextureOp_Divide:
-	 texStack->texOutputs[0].blendOp = TexBlendOp_Div;
-	 break;
-	 case aiTextureOp_Multiply:
-	 default:
-	 texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
-	 }
-
-	 switch (texWrapMode) {
-	 case aiTextureMapMode_Clamp:
-	 tex->wrapping = TexWrapMode_Clamp;
-	 break;
-	 default:
-	 tex->wrapping = TexWrapMode_Repeat;
-	 }
-	 texStack->texInputs[t].uvSet = uvIndex;
-	 texStack->textures[t] = TexturePtr(tex);
-	 texStack->texOutputs[t].mapTo = TexMapTo_Diffuse;
-	 texStack->texOutputs[t].blendFactor = blend;
-
-	 g_texID = tex->texID = g_texMgr->loadTexture(tex->filename, tex);
-	 }
-
-	 }
-	 }
-	 */
 }
 
-void drawTeapots() {
-
-	glDisable(GL_TEXTURE_2D);
-	glUseProgram(0);
-
-	glPushMatrix();
-	glTranslatef(0.0, 1.0f, 16.0f);
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glutSolidTeapot(.4f);
-	glPopMatrix();
-
-	glPushMatrix();
-	glTranslatef(0.0, 1.0f, -16.0f);
-	glColor3f(0.0f, 1.0f, 0.0f);
-	glutSolidTeapot(.4f);
-	glPopMatrix();
-
-	glPushMatrix();
-	glTranslatef(16.0, 1.0f, 0.0f);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glPolygonOffset(1.f, 1.f);
-	glutSolidTeapot(.4f);
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glutWireTeapot(.4f);
-	glPopMatrix();
-	glPushMatrix();
-	glTranslatef(-16.0, 1.0f, 0.0f);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glPolygonOffset(1.f, 1.f);
-	glutSolidTeapot(.4f);
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glutWireTeapot(.4f);
-	glPopMatrix();
-}
 
 void displayFunc(void) {
 
@@ -532,18 +352,9 @@ void displayFunc(void) {
 	roll = clamp(roll, -360.0f, 360.0f);
 	g_camera->updateViewProj();
 
-	//		glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, g_ambientLight);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, g_diffuseLight);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, g_specularLight);
-	glLightfv(GL_LIGHT0, GL_POSITION, g_posLight);
-
-	glShadeModel(g_shadeModel);
-
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-	//	rtt(g_planeTextureRT);
+	rtt(g_planeTextureRT);
 	render(g_camera, g_viewport);
 
 	long elapsed = timer.getMillis();
@@ -552,16 +363,12 @@ void displayFunc(void) {
 	if (g_lastTime > 1000) {
 		std::stringstream ss;
 		ss << "Frame time: " << elapsed << " ms";
-		std::cout << ss.str() << "\n";
 		g_text->setText(ss.str());
 		g_lastTime -= 1000;
 	}
 
-	//	g_text->setText("abcdefghijklmnopqrstuvwxyz");
-	//	g_rasterizer->getRenderLayer(0).addRenderable(g_text);
-
 	g_rasterizer->setRender2D(800, 600);
-	g_rasterizer->render(g_text, g_camera);
+	g_rasterizer->render(g_text.get(), g_camera);
 
 	glFlush();
 	glutSwapBuffers();
@@ -586,10 +393,9 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 	glPushMatrix();
 	Vec3f& p = g_camera->getPos();
 	glTranslatef(p.x, p.y, p.z);
-	//	scene.renderSky();
+	scene.renderSky();
 	glPopMatrix();
 
-	drawTeapots();
 
 	// render Bob
 	//	for (uint32_t i = 0; i < bobEntity->getNumRenderables(); i++) {
@@ -598,15 +404,22 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 	//		g_rasterizer->getRenderLayer(0).addRenderable(r);
 	//	}
 
+	// render male figure
+	for (uint32_t i = 0; i < maleEntity->getNumRenderables(); i++) {
+		Renderable* r = maleEntity->getRenderable(i);
+		r->setTransform(maleEntity->getTransform());
+		g_rasterizer->getRenderLayer(0).addRenderable(r);
+	}
+
 	// render billboard
-	//	Renderable* bb = billboardEntity->getRenderable(0);
-	//	bb->setTransform(billboardEntity->getTransform());
-	//	g_rasterizer->getRenderLayer(0).addRenderable(bb);
+	Renderable* bb = billboardEntity->getRenderable(0);
+	bb->setTransform(billboardEntity->getTransform());
+	g_rasterizer->getRenderLayer(0).addRenderable(bb);
 
 	// render quad strip
-	//	Renderable* qs = quadStripEnt->getRenderable(0);
-	//	qs->setTransform(quadStripEnt->getTransform());
-	//	g_rasterizer->getRenderLayer(0).addRenderable(qs);
+	//		Renderable* qs = quadStripEnt->getRenderable(0);
+	//		qs->setTransform(quadStripEnt->getTransform());
+	//		g_rasterizer->getRenderLayer(0).addRenderable(qs);
 
 	// render multi-material cube
 	for (uint32_t i = 0; i < multiMat->getNumRenderables(); i++) {
@@ -651,8 +464,6 @@ void rtt(RenderTargetTexture* rt) {
 
 	g_planeTextureRT->bind();
 
-	drawTeapots();
-
 	// render Bob
 	for (uint32_t i = 0; i < bobEntity->getNumRenderables(); i++) {
 		Renderable* r = bobEntity->getRenderable(i);
@@ -661,7 +472,9 @@ void rtt(RenderTargetTexture* rt) {
 	}
 
 	// render billboard
-	g_rasterizer->getRenderLayer(0).addRenderable(billboardEntity->getRenderable(0));
+	Renderable* bb = billboardEntity->getRenderable(0);
+	bb->setTransform(billboardEntity->getTransform());
+	g_rasterizer->getRenderLayer(0).addRenderable(bb);
 
 	// render multi-material cube
 	for (uint32_t i = 0; i < multiMat->getNumRenderables(); i++) {
@@ -749,10 +562,6 @@ void idleFunc(void) {
 }
 
 void closeFunc() {
-	if (glIsBuffer(triangleVBO))
-		glDeleteBuffers(1, &triangleVBO);
-
-	glDeleteTextures(1, &g_texID);
-
 	scene.dispose();
 }
+

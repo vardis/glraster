@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AABB.h"
 #include "VertexFormat.h"
 #include "VertexIndexBuffer.h"
 #include "Material.h"
@@ -9,13 +10,15 @@ class Mesh {
 protected:
 	VertexFormatPtr m_vertexFormat;
 	uint32_t m_numVertices;
-	bool m_vertexDataUpdated;
 
+	bool m_vertexDataUpdated;
 	bool m_indexDataUpdated;
 
 	VertexIndexBufferPtr m_ibo;
 
 	MaterialPtr m_material;
+
+	AABB<float> m_bounds;
 
 public:
 	Mesh();
@@ -27,8 +30,8 @@ public:
 
 	//	void updateIndexData(uint32_t* _idx, uint32_t _count, bool _copyData = false);
 
-	VertexFormat* getVertexFormat() {
-		return m_vertexFormat.get();
+	VertexFormatPtr getVertexFormat() {
+		return m_vertexFormat;//.get();
 	}
 
 	uint32_t getNumIndices() const {
@@ -66,6 +69,14 @@ public:
 	}
 	MaterialPtr getMaterial() const {
 		return m_material;
+	}
+
+	AABB<float> getBounds() {
+		return m_bounds;
+	}
+
+	void setBounds(const AABB<float> bounds) {
+		m_bounds = bounds;
 	}
 
 private:

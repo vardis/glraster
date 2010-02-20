@@ -9,11 +9,14 @@
 #include "MeshModel.h"
 
 MeshModel::MeshModel(Mesh* mesh) :
-	Renderable(), m_mesh(mesh) {
+	Renderable(), m_mesh(mesh), m_hasBindedOnce(false) {
+	m_vf = mesh->getVertexFormat();
 	m_material = m_mesh->getMaterial();
+	glGenVertexArrays(1, &m_vao);
 }
 
 MeshModel::~MeshModel() {
+	glDeleteVertexArrays(1, &m_vao);
 }
 
 void MeshModel::renderGeometry() {
@@ -22,24 +25,76 @@ void MeshModel::renderGeometry() {
 	glEnable(GL_RESCALE_NORMAL);
 
 	glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+	glBindVertexArray(m_vao);
+	if (!m_hasBindedOnce) {
+		VertexFormatPtr vf = m_mesh->getVertexFormat();
+		vf->bindData();
+		std::cout << "BINDING MESHMODEL DATA\n";
+		m_hasBindedOnce = true;
+	}
+	//	for (uint8_t i = 0; i < vf->getNumElements(); i++) {
+	//		VertexAttribute* ve = vf->getAttributeByIndex(i);
+	//		ve->m_vbo->uploadData();
+	//	}
+
+	MaterialPtr mat = m_mesh->getMaterial();
+	if (mat) {
+		for (uint8_t i = 0; i < MAX_TEXTURES_STACK; i++) {
+			TexturePtr tex = mat->m_texStack->textures[i];
+			if (tex && tex->m_texID && glIsTexture(tex->m_texID)) {
+				glEnable(tex->m_textureTarget);
+				glActiveTexture(GL_TEXTURE0 + i);
+				glClientActiveTexture(GL_TEXTURE0 + i);
+
+				//				VertexAttribute* ve = vf->getAttributeBySemantic((VertexAttributeSemantic) (Vertex_TexCoord0
+				//						+ mat->m_texStack->texInputs[i].uvSet));
+				//				ve->m_vbo->uploadData();
+			}
+		}
+	}
+
+	m_mesh->getIbo()->drawPrimitives();
+	glPopClientAttrib();
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+#ifdef EXPERIMENTAL_CODE
+void MeshModel::getRenderOperation(RenderOp& op) {
+	op.setState(m_renderState);
+	op.setType(RO_Indexed_Geometry);
+	op.setPrimitiveType(m_mesh->getIbo()->m_primitiveType);
+	op.setVertexFormat(m_vf);
+	op.setIndexBuffer(m_mesh->getIbo());
+}
+
+void MeshModel::renderAttribGeometry() {
+
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	m_renderState.enableRescaleNormals();
+	m_renderState.enable(RS_Rescale_Normals);
+
+	glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
 	VertexFormat* vf = m_mesh->getVertexFormat();
 	for (uint8_t i = 0; i < vf->getNumElements(); i++) {
-		VertexElement* ve = vf->getElementByIndex(i);
+		VertexAttribute* ve = vf->getAttributeByIndex(i);
 		ve->m_vbo->uploadData();
 	}
 
 	MaterialPtr mat = m_mesh->getMaterial();
 	if (mat) {
 		for (uint8_t i = 0; i < MAX_TEXTURES_STACK; i++) {
-			TexturePtr tex = mat->m_textures->textures[i];
+			TexturePtr tex = mat->m_texStack->textures[i];
 			if (tex && tex->m_texID && glIsTexture(tex->m_texID)) {
 				glEnable(tex->m_textureTarget);
 				glActiveTexture(GL_TEXTURE0 + i);
 				glClientActiveTexture(GL_TEXTURE0 + i);
 
-//				VertexElement* ve = vf->getElementBySemantic((VertexElementSemantic) (Vertex_TexCoord0
-//						+ mat->m_textures->texInputs[i].uvSet));
-//				ve->m_vbo->uploadData();
+				//				VertexAttribute* ve = vf->getAttributeBySemantic((VertexAttributeSemantic) (Vertex_TexCoord0
+				//						+ mat->m_texStack->texInputs[i].uvSet));
+				//				ve->m_vbo->uploadData();
 			}
 		}
 	}
@@ -50,11 +105,12 @@ void MeshModel::renderGeometry() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
+#endif
 
 void MeshModel::_updateBounds() {
 	//TODO: Remove this and calculate bounds upon the mesh creation
-	VertexElement* ve = m_mesh->getVertexFormat()->getElementByIndex(Vertex_Pos);
-	size_t formatSize = VertexElement::getFormatSize(ve->m_format);
+	VertexAttribute* ve = m_mesh->getVertexFormat()->getAttributeByIndex(Vertex_Pos);
+	size_t formatSize = VertexAttribute::getFormatSize(ve->m_format);
 	float x, y, z;
 	float* fData;
 	short* sData;

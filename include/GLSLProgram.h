@@ -8,6 +8,7 @@
 #ifndef GLSLPROGRAM_H_
 #define GLSLPROGRAM_H_
 
+#include "Colour.h"
 #include "GLSLShader.h"
 
 class GLSLProgram {
@@ -31,21 +32,47 @@ public:
 	void attachShader(const String& source, GLuint shaderType);
 	void attachShaderFromFile(const String& filename, GLuint shaderType);
 
-	GLSLShaderPtr getVertexsShader() {
-		return m_vertexShader;
-	}
-	GLSLShaderPtr getFragmentShader() {
-		return m_fragmentShader;
-	}
-
 	bool compile();
-	bool isCompiled() const {
-		return m_compiled;
-	}
 
 	// Linking is applied as a separate operation from compilation in order to allow for transform feedback
 	// which is specified after compilation but before linking
 	bool link();
+
+	/** Sets the program as the active one for future rendering operations */
+	void bind();
+	void unbind();
+
+	//-------------------------------------------------------------------------------------
+
+	GLint getAttributeIndex(const char* attributeName);
+	GLint getAttributeIndex(const String& attributeName);
+
+	// The family of functions below provide a uniform interface for setting values for a program's uniform
+	// variables
+	template<typename T>
+	void setUniform(const char* uniformName, T value);
+
+	template<typename T>
+	void setUniform(const String& uniformName, T value);
+
+	void setUniform(int uniformLoc, int value);
+
+	void setUniform(int uniformLoc, unsigned int value);
+
+	void setUniform(int uniformLoc, float value);
+
+	void setUniform(int uniformLoc, Colour& value);
+	//-------------------------------------------------------------------------------------
+
+	/**
+	 * Resets the state of this program and detaches any previously attached shaders.
+	 */
+	void reset();
+
+	bool isCompiled() const {
+		return m_compiled;
+	}
+
 	bool isLinked() const {
 		return m_linked;
 	}
@@ -54,10 +81,12 @@ public:
 		return m_hasErrors;
 	}
 
-	void bind();
-	void unbind();
-
-	void reset();
+	GLSLShaderPtr getVertexShader() {
+		return m_vertexShader;
+	}
+	GLSLShaderPtr getFragmentShader() {
+		return m_fragmentShader;
+	}
 };
 typedef shared_ptr<GLSLProgram> GLSLProgramPtr;
 

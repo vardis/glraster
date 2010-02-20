@@ -13,7 +13,9 @@
 #include <IL/ilut.h>
 #include <IL/devil_cpp_wrapper.hpp>
 
+#include "GLUtil.h"
 #include "Image.h"
+#include "DDSLoader.h"
 
 static ILenum _getILTypeFromGLType(GLenum type) {
 	ILenum ilType;
@@ -51,7 +53,7 @@ static ILenum _getILTypeFromGLType(GLenum type) {
 	return ilType;
 }
 
-static ILenum _getILFormatFromGLFormat(GLint format) {
+static ILenum _getILFormatFromGLFormat(GLenum format) {
 	ILenum ilFmt;
 	switch (format) {
 	case GL_RGBA:
@@ -81,33 +83,39 @@ static ILenum _getILFormatFromGLFormat(GLint format) {
 }
 
 Image::Image() :
-	m_width(800), m_height(600), m_format(GL_RGBA), m_type(GL_UNSIGNED_BYTE), m_pitch(800 * 4), m_data(0) {
-
+	m_width(0), m_height(0), m_format(GL_RGBA), m_dataType(GL_UNSIGNED_BYTE), m_pitch(0), m_mipmaps() {
+	m_mipmaps.push_back(ImageMipmapLevel());
 }
 
-Image::Image(uint32_t width, uint32_t height, GLuint format, void* data, GLenum type, uint32_t pitch) :
-	m_width(width), m_height(height), m_format(format), m_type(type), m_pitch(pitch), m_data(data) {
-	allocate();
+Image::Image(uint32_t width, uint32_t height, GLenum format, void* data, GLenum type, uint32_t pitch) :
+	m_width(width), m_height(height), m_format(format), m_dataType(type), m_pitch(pitch), m_mipmaps() {
 
+	allocate();
+	m_mipmaps.push_back(ImageMipmapLevel(data));
 }
 
 Image::~Image() {
-	if (m_data) {
-		delete[] m_data;
-	}
+//	if (m_data) {
+//		delete[] m_data;
+//	}
 }
 
-Image* Image::load(const String& filename) {
+ImagePtr Image::load(const String& filename) {
+	if (filename.find(".dds") != String::npos) {
+		std::cout << "DDS loader in action";
+		DDSLoader dds;
+		return dds.loadImage(filename);
+	}
 	ilImage il(filename.c_str());
 	if (il.Width() <= 0) {
 		ILenum error = ilGetError();
 		if (error != IL_NO_ERROR) {
 			std::cerr << "error in ilLoadImage: " << error << std::endl;
 		}
-		return 0;
+		return ImagePtr();
 	}
 
-	Image* img = new Image();
+	ImagePtr img(new Image());
 	img->m_width = il.Width();
 	img->m_height = il.Height();
 
@@ -140,38 +148,38 @@ Image* Image::load(const String& filename) {
 	ILenum imgType = il.Type();
 	switch (imgType) {
 	case IL_BYTE:
-		img->m_type = GL_BYTE;
+		img->m_dataType = GL_BYTE;
 		break;
 	case IL_UNSIGNED_BYTE:
-		img->m_type = GL_UNSIGNED_BYTE;
+		img->m_dataType = GL_UNSIGNED_BYTE;
 		break;
 	case IL_INT:
-		img->m_type = GL_INT;
+		img->m_dataType = GL_INT;
 		break;
 	case IL_UNSIGNED_INT:
-		img->m_type = GL_UNSIGNED_INT;
+		img->m_dataType = GL_UNSIGNED_INT;
 		break;
 	case IL_SHORT:
-		img->m_type = GL_SHORT;
+		img->m_dataType = GL_SHORT;
 		break;
 	case IL_UNSIGNED_SHORT:
-		img->m_type = GL_UNSIGNED_SHORT;
+		img->m_dataType = GL_UNSIGNED_SHORT;
 		break;
 	case IL_FLOAT:
-		img->m_type = GL_FLOAT;
+		img->m_dataType = GL_FLOAT;
 		break;
 	case IL_DOUBLE:
-		img->m_type = GL_DOUBLE;
+		img->m_dataType = GL_DOUBLE;
 		break;
 	case IL_HALF:
-		img->m_type = GL_HALF_FLOAT;
+		img->m_dataType = GL_HALF_FLOAT;
 		break;
 	default:
-		return 0;
+		return ImagePtr();
 	}
 
 	img->allocate();
-	memcpy(img->m_data, il.GetData(), img->m_width * img->m_height * il.Bpp());
+	memcpy(img->m_mipmaps[0].m_data.get(), il.GetData(), img->m_width * img->m_height * il.Bpp());
 
 	il.Close();
 
@@ -179,7 +187,7 @@ Image* Image::load(const String& filename) {
 }
 
 void Image::allocate() {
-	if (!m_data) {
+	if (!m_mipmaps[0].m_data) {
 		size_t numComponents = 0;
 		switch (m_format) {
 		case GL_RGB:
@@ -204,55 +212,59 @@ void Image::allocate() {
 			numComponents = 4;
 		}
 
-		switch (m_type) {
+		switch (m_dataType) {
 		case GL_BYTE:
 			m_pitch = numComponents * m_width;
-			m_data = new int8_t[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new int8_t[m_pitch * m_height]);
 			break;
 		case GL_UNSIGNED_BYTE:
 			m_pitch = numComponents * m_width;
-			m_data = new uint8_t[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new uint8_t[m_pitch * m_height]);
 			break;
 		case GL_INT:
 			m_pitch = numComponents * m_width * 4;
-			m_data = new int32_t[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new int32_t[m_pitch * m_height]);
 			break;
 		case GL_UNSIGNED_INT:
 			m_pitch = numComponents * m_width * 4;
-			m_data = new uint32_t[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new uint32_t[m_pitch * m_height]);
 			break;
 		case GL_SHORT:
 			m_pitch = numComponents * m_width * 2;
-			m_data = new int16_t[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new int16_t[m_pitch * m_height]);
 			break;
 		case GL_UNSIGNED_SHORT:
 			m_pitch = numComponents * m_width * 2;
-			m_data = new uint16_t[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new uint16_t[m_pitch * m_height]);
 			break;
 		case GL_FLOAT:
 			m_pitch = numComponents * m_width * sizeof(float);
-			m_data = new uint32_t[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new uint32_t[m_pitch * m_height]);
 			break;
 		case GL_DOUBLE:
 			m_pitch = numComponents * m_width * sizeof(double);
-			m_data = new uint32_t[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new uint32_t[m_pitch * m_height]);
 			break;
 		case GL_HALF_FLOAT:
 			m_pitch = numComponents * m_width * sizeof(GLhalf);
-			m_data = new GLhalf[m_pitch * m_height];
+			m_mipmaps[0].m_data.reset(new GLhalf[m_pitch * m_height]);
 			break;
 
 		default:
 			//TODO: error checking
 			assert(0);
 		}
-		memset(m_data, 0, m_pitch * m_height);
+		memset(m_mipmaps[0].m_data.get(), 0, m_pitch * m_height);
 	}
 }
 
 bool Image::saveToFile(const String& filename) {
 	ilImage il;
 	uint8_t bpp = m_pitch / m_width;
-	il.TexImage(m_width, m_height, 1, bpp, _getILFormatFromGLFormat(m_format), _getILTypeFromGLType(m_type), m_data);
+	il.TexImage(m_width, m_height, 1, bpp, _getILFormatFromGLFormat(m_format), _getILTypeFromGLType(m_dataType), m_mipmaps[0].m_data.get());
 	return il.Save(filename.data());
+}
+
+bool Image::isCompressed() const {
+	return GLUtil::isCompressedFormat(m_format);
 }

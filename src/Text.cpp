@@ -11,11 +11,7 @@
 Text::Text(TTFontPtr font) :
 	Renderable(), m_font(font), m_pos(0, 0), m_colour(), m_text(), m_geom(), m_updateGeom(false) {
 	m_material = font->getMaterial();
-}
-
-Text::Text(TTFont* font) :
-	Renderable(), m_font(TTFontPtr(font)), m_pos(0, 0), m_colour(), m_text(), m_geom() {
-	m_material = font->getMaterial();
+	m_geom.specifyVertexFormat(VertexFormatPtr(VertexFormat::create(VF_V3_N3_T2)));
 }
 
 Text::~Text() {
@@ -36,13 +32,8 @@ void Text::preRender() {
 	uint8_t pending = 0;
 	uint8_t b = 0;
 
-	VertexFormat vf;
-	vf.addElement(Vertex_Pos, VertexFormat_FLOAT3);
-	vf.addElement(Vertex_Normal, VertexFormat_FLOAT3);
-	vf.addElement(Vertex_TexCoord0, VertexFormat_FLOAT2);
-	m_geom.specifyVertexFormat(vf);
-
-	m_geom.beginGeometry(m_text.length());
+	// 2 triangles per glyph
+	m_geom.beginGeometry(2 * m_text.length());
 	m_geom.setMaterial(m_material);
 
 	const uint8_t* p = reinterpret_cast<const uint8_t*> (m_text.c_str());
@@ -81,54 +72,67 @@ void Text::preRender() {
 			}
 		} while (pending > 0 && *p);
 
-		float pos[3] = { 0, 0, 0 };
-		float uv[2];
+		float ll_pos[3] = { 0, 0, 0 };
+		float lr_pos[3] = { 0, 0, 0 };
+		float hr_pos[3] = { 0, 0, 0 };
+		float hl_pos[3] = { 0, 0, 0 };
+
+		float ll_uv[2];
+		float lr_uv[2];
+		float hr_uv[2];
+		float hl_uv[2];
 		float normal[] = { Vec3f::Front.x, Vec3f::Front.y, Vec3f::Front.z };
 		Codepoint cp;
 		if (m_font->getCodepoint(codepoint, cp)) {
 
-//			std::cout << "printing char " << (char) cp.m_codepoint << std::endl;
+			//			std::cout << "printing char " << (char) cp.m_codepoint << std::endl;
 
 			cx += cp.m_bearingX;
 
-			pos[0] = cx;
-			pos[1] = cy;
-			uv[0] = cp.m_u0;
-			uv[1] = cp.m_v0;
-//			std::cout << "adding pos " << pos[0] << " , " << pos[1] << "\n";
-//			std::cout << "adding uv " << uv[0] << " , " << uv[1] << "\n";
-			m_geom.vertexAttrib(Vertex_Pos, pos);
-			m_geom.vertexAttrib(Vertex_TexCoord0, uv);
+			// low left point
+			ll_pos[0] = cx;
+			ll_pos[1] = cy;
+			ll_uv[0] = cp.m_u0;
+			ll_uv[1] = cp.m_v0;
+
+			// low right point
+			lr_pos[0] = cx + cp.m_width;
+			lr_pos[1] = cy;
+			lr_uv[0] = cp.m_u1;
+			lr_uv[1] = cp.m_v0;
+
+			// up right point
+			hr_pos[0] = cx + cp.m_width;
+			hr_pos[1] = cy + cp.m_height;
+			hr_uv[0] = cp.m_u1;
+			hr_uv[1] = cp.m_v1;
+
+			// up left point
+			hl_pos[0] = cx;
+			hl_pos[1] = cy + cp.m_height;
+			hl_uv[0] = cp.m_u0;
+			hl_uv[1] = cp.m_v1;
+
+			// upper triangle
+			m_geom.vertexAttrib(Vertex_Pos, ll_pos);
+			m_geom.vertexAttrib(Vertex_TexCoord0, ll_uv);
+			m_geom.vertexAttrib(Vertex_Normal, normal);
+			m_geom.vertexAttrib(Vertex_Pos, hr_pos);
+			m_geom.vertexAttrib(Vertex_TexCoord0, hr_uv);
+			m_geom.vertexAttrib(Vertex_Normal, normal);
+			m_geom.vertexAttrib(Vertex_Pos, hl_pos);
+			m_geom.vertexAttrib(Vertex_TexCoord0, hl_uv);
 			m_geom.vertexAttrib(Vertex_Normal, normal);
 
-			pos[0] = cx + cp.m_width;
-			pos[1] = cy;
-			uv[0] = cp.m_u1;
-			uv[1] = cp.m_v0;
-//			std::cout << "adding pos " << pos[0] << " , " << pos[1] << "\n";
-//			std::cout << "adding uv " << uv[0] << " , " << uv[1] << "\n";
-			m_geom.vertexAttrib(Vertex_Pos, pos);
-			m_geom.vertexAttrib(Vertex_TexCoord0, uv);
+			// lower triangle
+			m_geom.vertexAttrib(Vertex_Pos, ll_pos);
+			m_geom.vertexAttrib(Vertex_TexCoord0, ll_uv);
 			m_geom.vertexAttrib(Vertex_Normal, normal);
-
-			pos[0] = cx + cp.m_width;
-			pos[1] = cy + cp.m_height;
-			uv[0] = cp.m_u1;
-			uv[1] = cp.m_v1;
-//			std::cout << "adding pos " << pos[0] << " , " << pos[1] << "\n";
-//			std::cout << "adding uv " << uv[0] << " , " << uv[1] << "\n";
-			m_geom.vertexAttrib(Vertex_Pos, pos);
-			m_geom.vertexAttrib(Vertex_TexCoord0, uv);
+			m_geom.vertexAttrib(Vertex_Pos, lr_pos);
+			m_geom.vertexAttrib(Vertex_TexCoord0, lr_uv);
 			m_geom.vertexAttrib(Vertex_Normal, normal);
-
-			pos[0] = cx;
-			pos[1] = cy + cp.m_height;
-			uv[0] = cp.m_u0;
-			uv[1] = cp.m_v1;
-//			std::cout << "adding pos " << pos[0] << " , " << pos[1] << "\n";
-//			std::cout << "adding uv " << uv[0] << " , " << uv[1] << "\n";
-			m_geom.vertexAttrib(Vertex_Pos, pos);
-			m_geom.vertexAttrib(Vertex_TexCoord0, uv);
+			m_geom.vertexAttrib(Vertex_Pos, hr_pos);
+			m_geom.vertexAttrib(Vertex_TexCoord0, hr_uv);
 			m_geom.vertexAttrib(Vertex_Normal, normal);
 
 			cx += cp.m_width;
