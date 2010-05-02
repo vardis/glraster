@@ -28,8 +28,6 @@ public:
 
 	void updateIndexData(IndexArrayPtr _idx, uint32_t _count);
 
-	//	void updateIndexData(uint32_t* _idx, uint32_t _count, bool _copyData = false);
-
 	VertexFormatPtr getVertexFormat() {
 		return m_vertexFormat;//.get();
 	}

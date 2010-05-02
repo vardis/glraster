@@ -13,6 +13,18 @@
 typedef struct Light {
 
 public:
+
+	Light() :
+		m_type(LightsTypeDirectional), m_position(0.0f), m_direction(Vec3f::Z_Neg_Axis), m_active(true), m_ambient(
+				0.0f, 0.0f, 0.0f), m_diffuse(1.0f, 1.0f, 1.0f, 1.0f), m_specular(1.0f, 1.0f, 1.0f, 1.0f),
+				m_cosSpotCutOff(0.0f) {
+
+	}
+
+	enum {
+		LightsTypeDirectional = 1, LightsTypeLamp = 2, LightsTypeSpot = 3
+	};
+
 	/** defines the type of light, e.g. directional or lamp. For safety, use the values declared in ShaderConstants. */
 	int m_type;
 	Vec3f m_position;
@@ -36,9 +48,7 @@ public:
 	/** indicates if this lights casts shadows */
 	bool m_castShadows;
 
-	/** valid for pre 3.2 OGL */
-	virtual void configureGLState() = 0;
-}Light;
+} Light;
 
 typedef shared_ptr<Light> LightPtr;
 

@@ -12,6 +12,13 @@ Text::Text(TTFontPtr font) :
 	Renderable(), m_font(font), m_pos(0, 0), m_colour(), m_text(), m_geom(), m_updateGeom(false) {
 	m_material = font->getMaterial();
 	m_geom.specifyVertexFormat(VertexFormatPtr(VertexFormat::create(VF_V3_N3_T2)));
+	m_vf = m_geom.getVertexFormat();
+
+	m_state.setDepthTest(false);
+	m_state.setShadeless(true);
+	m_state.setBlend(true);
+	m_state.setBlenSrcFunc(GL_SRC_ALPHA);
+	m_state.setBlenDstFunc(GL_ONE_MINUS_SRC_ALPHA);
 }
 
 Text::~Text() {

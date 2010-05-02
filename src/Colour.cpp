@@ -108,3 +108,6 @@ Colour operator*(float _r, const Colour& _c) {
 	return Colour(_r * _c.r, _r * _c.g, _r * _c.b, _r * _c.a);
 }
 
+bool operator==(const Colour& c1, const Colour& c2) {
+	return c1.r == c2.r && c1.g == c2.g && c1.b == c2.b && c1.a == c2.a;
+}

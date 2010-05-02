@@ -2,32 +2,32 @@
 #include "Vector.h"
 
 template<typename T>
-Vec3<T> Vec3<T>::Zero(0.0f, 0.0f, 0.0f);
+const Vec3<T> Vec3<T>::Zero(0.0f, 0.0f, 0.0f);
 
 template<typename T>
-Vec3<T> Vec3<T>::Front(0.0f, 0.0f, 1.0f);
+const Vec3<T> Vec3<T>::Front(0.0f, 0.0f, 1.0f);
 
 template<typename T>
-Vec3<T> Vec3<T>::X_Axis(1.0f, 0.0f, 0.0f);
+const Vec3<T> Vec3<T>::X_Axis(1.0f, 0.0f, 0.0f);
 
 template<typename T>
-Vec3<T> Vec3<T>::Y_Axis(0.0f, 1.0f, 0.0f);
+const Vec3<T> Vec3<T>::Y_Axis(0.0f, 1.0f, 0.0f);
 
 template<typename T>
-Vec3<T> Vec3<T>::Z_Axis(0.0f, 0.0f, 1.0f);
+const Vec3<T> Vec3<T>::Z_Axis(0.0f, 0.0f, 1.0f);
 
 template<typename T>
-Vec3<T> Vec3<T>::X_Neg_Axis(-1.0f, 0.0f, 0.0f);
+const Vec3<T> Vec3<T>::X_Neg_Axis(-1.0f, 0.0f, 0.0f);
 
 template<typename T>
-Vec3<T> Vec3<T>::Y_Neg_Axis(0.0f, -1.0f, 0.0f);
+const Vec3<T> Vec3<T>::Y_Neg_Axis(0.0f, -1.0f, 0.0f);
 
 template<typename T>
-Vec3<T> Vec3<T>::Z_Neg_Axis(0.0f, 0.0f, -1.0f);
+const Vec3<T> Vec3<T>::Z_Neg_Axis(0.0f, 0.0f, -1.0f);
 
 template<typename T>
 bool operator==(const Vec3<T>& lhs, const Vec3<T>& rhs) {
-	lhs.approximatelyEqual(rhs);
+	return lhs.approximatelyEqual(rhs);
 }
 
 template<typename T>
@@ -54,6 +54,7 @@ template class Vec3<double>;
 #endif
 
 // Function templates instantiations
+template bool operator==(const Vec3<float>& _v1, const Vec3<float>& _v2);
 template Vec3<float> operator*(float _r, const Vec3<float>& _v);
 template Vec3<float> operator*(double _r, const Vec3<float>& _v);
 template Vec3<float> operator*(int _r, const Vec3<float>& _v);

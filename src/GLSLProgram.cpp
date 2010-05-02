@@ -6,6 +6,8 @@
  */
 
 #include "GLTutor.h"
+#include "Colour.h"
+#include "Matrix4.h"
 #include "GLSLProgram.h"
 
 GLSLProgram::GLSLProgram() :
@@ -51,12 +53,14 @@ bool GLSLProgram::compile() {
 		m_hasErrors = true;
 		if (m_vertexShader && !m_vertexShader->isCompiled()) {
 			if (!m_vertexShader->compile()) {
+				std::cerr << m_vertexShader->getCompilationLog();
 				return false;
 			}
 		}
 
 		if (m_fragmentShader && !m_fragmentShader->isCompiled()) {
 			if (!m_fragmentShader->compile()) {
+				std::cerr << m_fragmentShader->getCompilationLog();
 				return false;
 			}
 		}
@@ -113,10 +117,10 @@ void GLSLProgram::unbind() {
 }
 
 void GLSLProgram::reset() {
-	if (m_vertexShader) {
+	if (m_vertexShader && m_vertexShader->m_shaderID) {
 		glDetachShader(m_progID, m_vertexShader->m_shaderID);
 	}
-	if (m_fragmentShader) {
+	if (m_fragmentShader && m_fragmentShader->m_shaderID) {
 		glDetachShader(m_progID, m_fragmentShader->m_shaderID);
 	}
 	m_compiled = false;
@@ -125,9 +129,11 @@ void GLSLProgram::reset() {
 
 GLint GLSLProgram::getAttributeIndex(const char* attributeName) {
 	GLint loc = glGetAttribLocation(m_progID, attributeName);
-	if (loc == 1 && strncmp("gl_", attributeName, 3)) {
-		SAFE_THROW(GLException(E_BADARG, "The specified vertex attribute hasn't been activated"));
-	}
+//	if (loc == -1) {
+//		std::stringstream ss;
+//		ss << "The specified vertex attribute '" << attributeName << "' hasn't been activated";
+//		SAFE_THROW(GLException(E_BADARG, ss.str().c_str()));
+//	}
 	return loc;
 }
 
@@ -136,16 +142,19 @@ GLint GLSLProgram::getAttributeIndex(const String& attributeName) {
 }
 
 template<typename T>
-void GLSLProgram::setUniform(const char* uniformName, T value) {
+void GLSLProgram::setUniform(const char* uniformName, T& value) {
 	if (!m_linked) {
 		SAFE_THROW(GLException(E_BADSTATE, "GLSL program must be linked before binding uniforms"));
 	}
 	int loc = glGetUniformLocation(m_progID, uniformName);
-	this->setUniform(loc, value);
+	// the uniform could either not exist or be inactive (e.g. removed by the glsl compiler as it was not used)
+	if (loc != -1) {
+		this->setUniform(loc, value);
+	}
 }
 
 template<typename T>
-void GLSLProgram::setUniform(const String& uniformName, T value) {
+void GLSLProgram::setUniform(const String& uniformName, T& value) {
 	if (!m_linked) {
 		SAFE_THROW(GLException(E_BADSTATE, "GLSL program must be linked before binding uniforms"));
 	}
@@ -159,7 +168,8 @@ void GLSLProgram::setUniform(int uniformLoc, int value) {
 
 void GLSLProgram::setUniform(int uniformLoc, unsigned int value) {
 	assert(m_linked);
-	glUniform1uiv(uniformLoc, 1, &value);
+//	glUniform1uiv(uniformLoc, 1, &value);
+	glUniform1i(uniformLoc, (int)value);
 }
 
 void GLSLProgram::setUniform(int uniformLoc, float value) {
@@ -167,13 +177,27 @@ void GLSLProgram::setUniform(int uniformLoc, float value) {
 	glUniform1fv(uniformLoc, 1, &value);
 }
 
-void GLSLProgram::setUniform(int uniformLoc, Colour& value) {
+void GLSLProgram::setUniform(int uniformLoc, Matrix4f& mat) {
 	assert(m_linked);
-	glUniform4fv(uniformLoc, 1, value.rgba);
+	glUniformMatrix4fv(uniformLoc, 1, false, mat.ptr());
+}
+
+void GLSLProgram::setUniform(int uniformLoc, Vec3f& vec) {
+	assert(m_linked);
+	glUniform3fv(uniformLoc, 1, vec.ptr());
+}
+
+template<typename T>
+void GLSLProgram::setUniform(int uniformLoc, T& value) {
+	assert(m_linked);
+	glUniform4fv(uniformLoc, 1, value.ptr());
 }
 
 // Function templates instantiations
-template void GLSLProgram::setUniform(const char* uniformName, Colour value);
-template void GLSLProgram::setUniform(const char* uniformName, float value);
-template void GLSLProgram::setUniform(const char* uniformName, unsigned int value);
+template void GLSLProgram::setUniform(const char* uniformName, Colour& value);
+template void GLSLProgram::setUniform(const char* uniformName, float& value);
+template void GLSLProgram::setUniform(const char* uniformName, int& value);
+template void GLSLProgram::setUniform(const char* uniformName, unsigned int& value);
+template void GLSLProgram::setUniform(const char* uniformName, Matrix4f& value);
+template void GLSLProgram::setUniform(const char* uniformName, Vec3f& value);
 

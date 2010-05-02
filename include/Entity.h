@@ -28,6 +28,7 @@ public:
 	}
 
 	void addRenderable(Renderable* r);
+	void addRenderable(RenderablePtr r);
 	void clearRenderables();
 
 	uint32_t getNumRenderables() const {

@@ -11,18 +11,20 @@ Vertex Shader Outputs / Fragment Shader Inputs
 ----------------------------------------------
 vec3 fs_Normal: vertex normal
 vec4 fs_Color: vertex color
-vec4 fs_TexCoords[] : uv coords for UV sets
+vec2 fs_TexCoords[] : uv coords for UV sets
 }}
 
+// position of the shading point in eye/camera space
+out vec3 fs_eyePos;
 
 {{#HAS_NORMALS}}
-inout vec3 fs_Normal;
+{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec3 fs_Normal;
 {{/HAS_NORMALS}}
 
 {{#HAS_COLORS}}
-{{SHADE_MODE}} out vec4 fs_Color;
+{{SHADE_MODE}} {{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec4 fs_Color;
 {{/HAS_COLORS}}
 
 {{#HAS_TEXTURES}}
-inout vec4 fs_TexCoords[{{NUM_UV_SETS}}];
+{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec2 fs_TexCoords[{{NUM_UV_SETS}}];
 {{/HAS_TEXTURES}}

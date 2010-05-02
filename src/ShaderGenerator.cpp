@@ -19,7 +19,7 @@ ShaderGenerator::~ShaderGenerator() {
 	// TODO Auto-generated destructor stub
 }
 
-void ShaderGenerator::generateShaders(const Material& mat, const VertexFormat& vf) {
+void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, const VertexFormat& vf) {
 
 	ctemplate::TemplateDictionary vertexShaderDict("vertexShader");
 	ctemplate::TemplateDictionary fragmentShaderDict("fragmentShader");
@@ -27,11 +27,17 @@ void ShaderGenerator::generateShaders(const Material& mat, const VertexFormat& v
 	ctemplate::TemplateDictionary* vertexIoDict = vertexShaderDict.AddIncludeDictionary("VERTEX_INPUTS");
 	vertexIoDict->SetFilename("shader_templates/ft_vertex_inout.tpl");
 
-	ctemplate::TemplateDictionary* fragmentIoDict = vertexShaderDict.AddIncludeDictionary("FRAGMENT_INPUTS");
-	fragmentIoDict->SetFilename("shader_templates/ft_fragment_inout.tpl");
+	ctemplate::TemplateDictionary* fragmentOutDict = vertexShaderDict.AddIncludeDictionary("FRAGMENT_INPUTS");
+	fragmentOutDict->SetFilename("shader_templates/ft_fragment_inout.tpl");
+	fragmentOutDict->ShowSection("OUT_DIRECTION");
 
 	ctemplate::TemplateDictionary* uniformsDict = vertexShaderDict.AddIncludeDictionary("UNIFORMS");
 	uniformsDict->SetFilename("shader_templates/uniforms.tpl");
+
+	// use lighting when material uses shading and we have normals
+	if (!mat.m_shadeless && vf.getAttributeBySemantic(Vertex_Normal)) {
+		uniformsDict->ShowSection("USE_LIGHTING");
+	}
 
 	if (vf.getAttributeBySemantic(Vertex_Normal)) {
 		vertexShaderDict.ShowSection("HAS_NORMALS");
@@ -40,7 +46,7 @@ void ShaderGenerator::generateShaders(const Material& mat, const VertexFormat& v
 		vertexIoDict->ShowSection("HAS_NORMALS");
 		vertexIoDict->ShowSection("NORMALIZE_NORMALS");
 
-		fragmentIoDict->ShowSection("HAS_NORMALS");
+		fragmentOutDict->ShowSection("HAS_NORMALS");
 
 		uniformsDict->ShowSection("HAS_NORMALS");
 	}
@@ -48,7 +54,7 @@ void ShaderGenerator::generateShaders(const Material& mat, const VertexFormat& v
 	if (vf.getAttributeBySemantic(Vertex_Color)) {
 		vertexShaderDict.ShowSection("HAS_COLORS");
 		vertexIoDict->ShowSection("HAS_COLORS");
-		fragmentIoDict->ShowSection("HAS_COLORS");
+		fragmentOutDict->ShowSection("HAS_COLORS");
 	}
 
 	// indicates if the tex coords generation functions declarations template has already been
@@ -172,8 +178,9 @@ void ShaderGenerator::generateShaders(const Material& mat, const VertexFormat& v
 	// TODO: calculate this per material
 	size_t numUvSets = 1;
 	if (activeTextures > 0) {
+		uniformsDict->SetValueAndShowSection("NUM_TEXTURES", "1", "HAS_TEXTURES");
 		vertexIoDict->SetValueAndShowSection("NUM_UV_SETS", "1", "HAS_TEXTURES");
-		fragmentIoDict->SetValueAndShowSection("NUM_UV_SETS", "1", "HAS_TEXTURES");
+		fragmentOutDict->SetValueAndShowSection("NUM_UV_SETS", "1", "HAS_TEXTURES");
 	}
 
 	for (uint uv = 0; uv < numUvSets; uv++) {
@@ -183,9 +190,10 @@ void ShaderGenerator::generateShaders(const Material& mat, const VertexFormat& v
 
 	ctemplate::Template* vertexShaderTpl = ctemplate::Template::GetTemplate("shader_templates/ft_shader.tpl",
 			ctemplate::STRIP_BLANK_LINES);
-	std::string output;
-	vertexShaderTpl->Expand(&output, &vertexShaderDict);
-	std::cout << output;
+	std::string vertexOutput;
+	vertexShaderTpl->Expand(&vertexOutput, &vertexShaderDict);
+	std::cout << vertexOutput;
+	mat.getGpuProgram()->attachShader(vertexOutput, GL_VERTEX_SHADER);
 
 	//---------------------------[ Fragment Shader ]-------------------------
 
@@ -199,23 +207,37 @@ void ShaderGenerator::generateShaders(const Material& mat, const VertexFormat& v
 	uniformsTpl->Expand(&fragUniformsStr, uniformsDict);
 	fragmentShaderDict.SetValue("UNIFORMS", fragUniformsStr);
 
-	// the same problem as above holds true for the fragment shader inputs/outputs dictionary, so we
-	// again manually expand the template with the dictionary already created for the vertex shader
+	ctemplate::TemplateDictionary* fragmentInDict = fragmentShaderDict.AddIncludeDictionary("FRAGMENT_INPUTS");
+	fragmentInDict->SetFilename("shader_templates/ft_fragment_inout.tpl");
+	fragmentInDict->ShowSection("IN_DIRECTION");
+	if (vf.getAttributeBySemantic(Vertex_Normal)) {
+		fragmentInDict->ShowSection("HAS_NORMALS");
+	}
+	if (vf.getAttributeBySemantic(Vertex_Color)) {
+		fragmentInDict->ShowSection("HAS_COLORS");
+	}
+	if (activeTextures > 0) {
+		fragmentInDict->SetValueAndShowSection("NUM_UV_SETS", "1", "HAS_TEXTURES");
+	}
+
 	std::string fragIoStr;
 	ctemplate::Template* fragIoTpl = ctemplate::Template::GetTemplate("shader_templates/ft_fragment_inout.tpl",
 			ctemplate::STRIP_BLANK_LINES);
-	fragIoTpl->Expand(&fragIoStr, fragmentIoDict);
+	fragIoTpl->Expand(&fragIoStr, fragmentOutDict);
 	fragmentShaderDict.SetValue("FRAGMENT_INPUTS", fragIoStr);
 
-	// for now, enable Blinn-Phong shading mode only
-	fragmentShaderDict.ShowSection("PHONG_LIGHTING");
-	ctemplate::TemplateDictionary* lightingDict = fragmentShaderDict.AddIncludeDictionary("LIGHTING");
-	lightingDict->SetFilename("shader_templates/ft_lighting.tpl");
+	if (!mat.m_shadeless && vf.getAttributeBySemantic(Vertex_Normal)) {
+		// for now, enable Blinn-Phong shading mode only
+		fragmentShaderDict.ShowSection("PHONG_LIGHTING");
+		ctemplate::TemplateDictionary* lightingDict = fragmentShaderDict.AddIncludeDictionary("LIGHTING");
+		lightingDict->SetFilename("shader_templates/ft_lighting.tpl");
+		lightingDict->ShowSection("WITH_LIGHT_ATTENUATION");
+	}
 
 	ctemplate::Template* fragmentShaderTpl = ctemplate::Template::GetTemplate("shader_templates/ft_fs_shader.tpl",
 			ctemplate::STRIP_BLANK_LINES);
 	std::string fragOutput;
 	fragmentShaderTpl->Expand(&fragOutput, &fragmentShaderDict);
 	std::cout << fragOutput;
-
+	mat.getGpuProgram()->attachShader(fragOutput, GL_FRAGMENT_SHADER);
 }

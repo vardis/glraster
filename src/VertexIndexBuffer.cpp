@@ -112,7 +112,31 @@ uint32_t* VertexIndexBuffer::mapSubData(GLbitfield accessType, uint32_t offset, 
 }
 
 void VertexIndexBuffer::unmapData() {
-	this->bind();
-	glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
-	m_isMapped = false;
+	if (m_isMapped) {
+		this->bind();
+		glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+		m_isMapped = false;
+	}
+}
+
+void VertexIndexBuffer::printData() {
+
+	uint32_t* fp = this->mapData();
+	std::cout << "Printing " << m_numIndices << " indices\n";
+	for (uint32_t e = 0, c = 1; e < m_numIndices; e++) {
+		if (!c)
+			std::cout << "(";
+
+		std::cout << *fp++ << ", ";
+
+		if (c % 3 == 0) {
+			std::cout << ")\n";
+			c = 1;
+		} else {
+			++c;
+		}
+	}
+	std::cout << ")\n";
+	this->unmapData();
+
 }

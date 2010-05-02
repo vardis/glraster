@@ -15,6 +15,8 @@ public:
 	static const char* const VATTR_Color;
 	static const char* const VATTR_TexCoords[8];
 
+	static const char* const Fragment_Color;
+
 	static const char* const UNIFORM_ModelViewProj;
 	static const char* const UNIFORM_ModelView;
 	static const char* const UNIFORM_Model;
@@ -37,9 +39,8 @@ public:
 
 	static const char* const UNIFORM_TexEnvColors[MAX_TEXTURES_STACK];
 
-	static const int UNIFORM_LightsTypeDirectional;
-	static const int UNIFORM_LightsTypeLamp;
-	static const int UNIFORM_LightsTypeSpot;
+	static const char* const UNIFORM_NumLights;
+
 
 	static const char* const UNIFORM_LightsType[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsPos[MAX_LIGHTS];
@@ -48,7 +49,7 @@ public:
 	static const char* const UNIFORM_LightsDiffuse[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsSpecular[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsCosSpotCutOff[MAX_LIGHTS];
-	static const char* const UNIFORM_LightsAttenuation[MAX_LIGHTS];
+	static const char* const UNIFORM_LightsConstAttenuation[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsLinearAttenuation[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsQuadraticAttenuation[MAX_LIGHTS];
 };

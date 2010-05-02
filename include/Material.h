@@ -53,11 +53,15 @@ public:
 	bool m_twoSided;
 	bool m_transparent;
 	float m_opacity;
+	bool  m_shadeless;
 
 	TextureStackPtr m_texStack;
 
 private:
-	// filenames of shaders
+	/** indicates if the shaders were custom made by the user or they were auto generated */
+	bool m_customShaders;
+
+	/** filename of the vertex shader */
 	String m_vertexShader;
 	String m_fragmentShader;
 
@@ -67,16 +71,13 @@ public:
 	Material();
 	~Material();
 
-	/** For compatibility profile */
-	void applyGLState();
-
 	/**
 	 * Sets up the GLSL shader program for this material using either the provided program
 	 * or creating a new program based on the m_vertexShader and m_fragmentShader fields.
 	 *
 	 * @param prog an existing program for using with this material
 	 */
-	void setupShaderProgram(GLSLProgramPtr prog);
+	void setupShaderProgram(GLSLProgramPtr prog = GLSLProgramPtr());
 
 	/**
 	 * Binds the material's attributes to uniform variables of the glsl program.
@@ -92,8 +93,12 @@ public:
 		this->m_texStack = texStack;
 	}
 
+	void setCustomShaders(bool value) {
+		m_customShaders = value;
+	}
+
 	bool hasCustomShaders() const {
-		return m_vertexShader.length() || m_fragmentShader.length();
+		return m_customShaders;
 	}
 
 	String getFragmentShader() const {

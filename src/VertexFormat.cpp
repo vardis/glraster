@@ -81,7 +81,7 @@ VertexAttribute* VertexFormat::addAttribute(VertexAttribute* ve) {
 
 VertexAttribute* VertexFormat::addAttribute(VertexAttributeSemantic semantic, VertexAttributeFormat format,
 		uint32_t offset, void* data) {
-	assert(m_numAttributes <= MAX_VERTEX_ELEMENTS);
+	assert(m_numAttributes <= MAX_VERTEX_ELEMENTS && !this->getAttributeBySemantic(semantic));
 	return this->addAttribute(new VertexAttribute(semantic, format, offset, data));
 }
 
@@ -108,8 +108,25 @@ uint8_t VertexFormat::getNumElements() const {
 	return m_numAttributes;
 }
 
-//void VertexFormat::printData() {
-//	for (uint8_t i = 0; i < m_numAttributes; i++) {
-//		m_attributes[i];
-//	}
-//}
+void VertexFormat::printData() {
+	for (uint8_t i = 0; i < m_numAttributes; i++) {
+		VertexAttribute* va = this->getAttributeByIndex(i);
+		float* fp = (float*) va->m_vbo->mapData();
+		std::cout << "Print attribute with semantic: " << va->m_semantic << " having " << va->m_vbo->m_numElements << " elements\n";
+		uint32_t count = va->getFormatElementCount(va->m_format);
+		for (uint32_t e = 0, c = 0; e < va->m_vbo->m_numElements*count; e++) {
+			if (!c) std::cout << "(";
+
+			std::cout << *fp++ << ", ";
+
+			if (c == count - 1) {
+				std::cout << ")\n";
+				c = 0;
+			} else {
+				++c;
+			}
+		}
+		std::cout << ")\n";
+		va->m_vbo->unmapData();
+	}
+}

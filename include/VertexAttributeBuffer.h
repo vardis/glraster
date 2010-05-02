@@ -54,10 +54,10 @@ public:
 	void allocate(uint32_t numElements);
 	void deallocate();
 
+	void bindAttributeData(GLuint attributeIndex);
 	void bind();
 	void unbind();
 	void printData();
-	void uploadData();
 
 	bool isMapped() const {
 		return m_mapped != 0;

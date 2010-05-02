@@ -124,33 +124,54 @@ template<typename T>
 class Vec3 {
 
 public:
-	T x, y, z;
+	T coords[3];
 
-	static Vec3<T> Zero;
-	static Vec3<T> Front;
+	/** references coords[0] */
+	T& x;
 
-	static Vec3<T> X_Axis;
-	static Vec3<T> Y_Axis;
-	static Vec3<T> Z_Axis;
+	/** references coords[1] */
+	T& y;
 
-	static Vec3<T> X_Neg_Axis;
-	static Vec3<T> Y_Neg_Axis;
-	static Vec3<T> Z_Neg_Axis;
+	/** references coords[2] */
+	T& z;
+
+	static const Vec3<T> Zero;
+	static const Vec3<T> Front;
+
+	static const Vec3<T> X_Axis;
+	static const Vec3<T> Y_Axis;
+	static const Vec3<T> Z_Axis;
+
+	static const Vec3<T> X_Neg_Axis;
+	static const Vec3<T> Y_Neg_Axis;
+	static const Vec3<T> Z_Neg_Axis;
 
 	Vec3() :
-		x(), y(), z() {
+		x(coords[0]), y(coords[1]), z(coords[2]) {
+		coords[0] = coords[1] = coords[2] = 0.0f;
 	}
 
 	explicit Vec3(T _v) :
-		x(_v), y(_v), z(_v) {
+		x(coords[0]), y(coords[1]), z(coords[2]) {
+		coords[0] = coords[1] = coords[2] = _v;
 	}
 
 	Vec3(T _x, T _y, T _z) :
-		x(_x), y(_y), z(_z) {
+		x(coords[0]), y(coords[1]), z(coords[2]) {
+		coords[0] = _x;
+		coords[1] = _y;
+		coords[2] = _z;
 	}
 
 	Vec3(const Vec3<T>& _v) :
-		x(_v.x), y(_v.y), z(_v.z) {
+		x(coords[0]), y(coords[1]), z(coords[2]) {
+		coords[0] = _v.coords[0];
+		coords[1] = _v.coords[1];
+		coords[2] = _v.coords[2];
+	}
+
+	T* ptr() {
+		return &coords[0];
 	}
 
 	void get(T& _x, T& _y, T& _z) const {
@@ -207,7 +228,7 @@ public:
 		}
 	}
 
-	bool approximatelyEqual(const Vec3<T>& _v) {
+	bool approximatelyEqual(const Vec3<T>& _v) const {
 		return (fabs(x - _v.x) < 0.0001f) && (fabs(y - _v.y) < 0.0001f) && (fabs(z - _v.z) < 0.0001f);
 	}
 
@@ -258,7 +279,7 @@ public:
 	}
 
 	float operator[](uint8_t i) const {
-		if (i) {
+		if (!i) {
 			return x;
 		} else if (i == 1) {
 			return y;

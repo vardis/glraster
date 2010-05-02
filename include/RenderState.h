@@ -10,13 +10,13 @@
 
 #include "Colour.h"
 
-extern const int MAX_CLIP_PLANES = 8;
-
 /**
  * Encapsulates the values of the various OGL render states and offers a simple interface for changing
  * a set of render states or capture the current OGL render state in an instance of this class.
  */
 class RenderState {
+public:
+	static const int MAX_CLIP_PLANES = 8;
 
 protected:
 	/** user clip planes */
@@ -24,6 +24,9 @@ protected:
 
 	/** render mode for polygons: GL_POINT, GL_LINE, GL_FILL */
 	GLenum m_renderMode;
+
+	/** indicates if cull should be enabled */
+	bool m_culling;
 
 	/** specifies which faces are culled: GL_FRONT, GL_BACK, GL_FRONT_AND_BACK */
 	GLenum m_cullFace;
@@ -91,59 +94,69 @@ protected:
 	/** indicates if the stencil buffer should be cleared or not */
 	bool m_clearStencilBuffer;
 
+	/** indicates if lighting should not be used */
+	bool m_shadeless;
+
+	/** indicates if alpha blending should be used */
+	bool m_blend;
+
+	/** blending function too use for incoming fragments */
+	GLenum m_blenSrcFunc;
+
+	/** blending function too use for existing fragments */
+	GLenum m_blenDstFunc;
+
 public:
 	RenderState();
+	RenderState(const RenderState& rs);
 
 	bool operator==(const RenderState& rs);
 
-	/**
-	 * Performs a fast hash calculation based on the values of this RenderState fields, the result can
-	 * be safely used to determine if two instances are equal or not.
-	 * @return
-	 */
-	long hashCode() const;
-    bool getClearColorBuffer() const
-    {
-        return m_clearColorBuffer;
-    }
+	GLenum getBlenDstFunc() const {
+		return m_blenDstFunc;
+	}
 
-    bool getClearDepthBuffer() const
-    {
-        return m_clearDepthBuffer;
-    }
+	GLenum getBlenSrcFunc() const {
+		return m_blenSrcFunc;
+	}
 
-    bool getClearStencilBuffer() const
-    {
-        return m_clearStencilBuffer;
-    }
+	bool getBlend() const {
+		return m_blend;
+	}
 
+	bool getClearColorBuffer() const {
+		return m_clearColorBuffer;
+	}
 
-    bool getStencil() const
-    {
-        return m_stencil;
-    }
+	bool getClearDepthBuffer() const {
+		return m_clearDepthBuffer;
+	}
 
-    void setClearColorBuffer(bool clearColorBuffer)
-    {
-        this->m_clearColorBuffer = clearColorBuffer;
-    }
+	bool getClearStencilBuffer() const {
+		return m_clearStencilBuffer;
+	}
 
-    void setClearDepthBuffer(bool clearDepthBuffer)
-    {
-        this->m_clearDepthBuffer = clearDepthBuffer;
-    }
+	bool getStencil() const {
+		return m_stencil;
+	}
 
-    void setClearStencilBuffer(bool clearStencilBuffer)
-    {
-        this->m_clearStencilBuffer = clearStencilBuffer;
-    }
+	void setClearColorBuffer(bool clearColorBuffer) {
+		this->m_clearColorBuffer = clearColorBuffer;
+	}
 
-    void setStencil(bool stencil)
-    {
-        this->m_stencil = stencil;
-    }
+	void setClearDepthBuffer(bool clearDepthBuffer) {
+		this->m_clearDepthBuffer = clearDepthBuffer;
+	}
 
-    Colour getClearColor() const {
+	void setClearStencilBuffer(bool clearStencilBuffer) {
+		this->m_clearStencilBuffer = clearStencilBuffer;
+	}
+
+	void setStencil(bool stencil) {
+		this->m_stencil = stencil;
+	}
+
+	Colour getClearColor() const {
 		return m_clearColor;
 	}
 
@@ -155,9 +168,12 @@ public:
 		return m_clearStencil;
 	}
 
-
 	bool getColorMask() const {
 		return m_colorMask;
+	}
+
+	bool getCulling() const {
+		return m_culling;
 	}
 
 	GLenum getCullFace() const {
@@ -200,6 +216,18 @@ public:
 		return m_scissorLeft;
 	}
 
+	float getScissorBottom() const {
+		return this->m_scissorBottom;
+	}
+
+	float getScissorWidth() const {
+		return this->m_scissorWidth;
+	}
+
+	float getScissorHeight() const {
+		return this->m_scissorHeight;
+	}
+
 	GLenum getStencilFunc() const {
 		return m_stencilFunc;
 	}
@@ -220,6 +248,10 @@ public:
 		return m_stencilRef;
 	}
 
+	bool isShadeless() const {
+		return m_shadeless;
+	}
+
 	void setClearColor(Colour clearColor) {
 		this->m_clearColor = clearColor;
 	}
@@ -232,6 +264,9 @@ public:
 		this->m_clearStencil = clearStencil;
 	}
 
+	void setCulling(bool cull) {
+		this->m_culling = cull;
+	}
 
 	void setCullFace(GLenum cullFace) {
 		this->m_cullFace = cullFace;
@@ -273,6 +308,18 @@ public:
 		this->m_scissorLeft = scissorLeft;
 	}
 
+	void setScissorBottom(float scissorBottom) {
+		this->m_scissorBottom = scissorBottom;
+	}
+
+	void setScissorWidth(float scissorWidth) {
+		this->m_scissorWidth = scissorWidth;
+	}
+
+	void setScissorHeight(float scissorHeight) {
+		this->m_scissorHeight = scissorHeight;
+	}
+
 	void setStencilFunc(GLenum stencilFunc) {
 		this->m_stencilFunc = stencilFunc;
 	}
@@ -293,6 +340,21 @@ public:
 		this->m_stencilRef = stencilRef;
 	}
 
+	void setShadeless(bool val) {
+		this->m_shadeless = val;
+	}
+
+	void setBlenDstFunc(GLenum blenDstFunc) {
+		this->m_blenDstFunc = blenDstFunc;
+	}
+
+	void setBlenSrcFunc(GLenum blenSrcFunc) {
+		this->m_blenSrcFunc = blenSrcFunc;
+	}
+
+	void setBlend(bool blend) {
+		this->m_blend = blend;
+	}
 };
 
 #endif /* RENDERSTATE_H_ */

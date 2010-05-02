@@ -8,12 +8,14 @@
 #include "GLTutor.h"
 #include "ShaderConstants.h"
 
-const char* const ShaderConstants::VATTR_Pos = "vs_Vertex";
+const char* const ShaderConstants::VATTR_Pos = "vs_VertexPos";
 const char* const ShaderConstants::VATTR_Normal = "vs_Normal";
 const char* const ShaderConstants::VATTR_Color = "vs_Color";
 const char* const ShaderConstants::VATTR_TexCoords[8] = { "vs_TexCoords[0]", "vs_TexCoords[1]", "vs_TexCoords[2]",
 															"vs_TexCoords[3]", "vs_TexCoords[4]", "vs_TexCoords[5]",
 															"vs_TexCoords[6]", "vs_TexCoords[7]" };
+
+const char* const ShaderConstants::Fragment_Color = "fs_FragColor";
 
 const char* const ShaderConstants::UNIFORM_ModelViewProj = "u_ModelViewProjection";
 const char* const ShaderConstants::UNIFORM_ModelView = "u_ModelView";
@@ -47,10 +49,7 @@ const char* const ShaderConstants::UNIFORM_TexEnvColors[MAX_TEXTURES_STACK] = { 
 																				"u_TexEnvColors[6]",
 																				"u_TexEnvColors[7]" };
 
-// Important: these values must match the respective constants in the uniforms template
-const int ShaderConstants::UNIFORM_LightsTypeDirectional = 1;
-const int ShaderConstants::UNIFORM_LightsTypeLamp = 2;
-const int ShaderConstants::UNIFORM_LightsTypeSpot = 3;
+const char* const ShaderConstants::UNIFORM_NumLights = "u_NumLights";
 
 const char* const ShaderConstants::UNIFORM_LightsType[MAX_LIGHTS] = { 	"u_Lights[0].type",
 																		"u_Lights[1].type",
@@ -115,14 +114,14 @@ const char* const ShaderConstants::UNIFORM_LightsCosSpotCutOff[MAX_LIGHTS] = { 	
 																		"u_Lights[6].cosSpotCutOff",
 																		"u_Lights[7].cosSpotCutOff" };
 
-const char* const ShaderConstants::UNIFORM_LightsAttenuation[MAX_LIGHTS] = { 	"u_Lights[0].attenuation",
-																		"u_Lights[1].attenuation",
-																		"u_Lights[2].attenuation",
-																		"u_Lights[3].attenuation",
-																		"u_Lights[4].attenuation",
-																		"u_Lights[5].attenuation",
-																		"u_Lights[6].attenuation",
-																		"u_Lights[7].attenuation" };
+const char* const ShaderConstants::UNIFORM_LightsConstAttenuation[MAX_LIGHTS] = { 	"u_Lights[0].constAttenuation",
+																		"u_Lights[1].constAttenuation",
+																		"u_Lights[2].constAttenuation",
+																		"u_Lights[3].constAttenuation",
+																		"u_Lights[4].constAttenuation",
+																		"u_Lights[5].constAttenuation",
+																		"u_Lights[6].constAttenuation",
+																		"u_Lights[7].constAttenuation" };
 
 const char* const ShaderConstants::UNIFORM_LightsLinearAttenuation[MAX_LIGHTS] = { 	"u_Lights[0].linearAttenuation",
 																		"u_Lights[1].linearAttenuation",

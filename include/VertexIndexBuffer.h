@@ -40,6 +40,8 @@ public:
 	uint32_t* mapData(GLenum accessType = GL_READ_WRITE);
 	uint32_t* mapSubData(GLbitfield accessType = GL_MAP_WRITE_BIT, uint32_t offset = 0, uint32_t count = 0);
 	void unmapData();
+
+	void printData();
 };
 typedef shared_ptr<VertexIndexBuffer> VertexIndexBufferPtr;
 

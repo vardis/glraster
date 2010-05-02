@@ -21,43 +21,18 @@ MeshModel::~MeshModel() {
 
 void MeshModel::renderGeometry() {
 
-	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-	glEnable(GL_RESCALE_NORMAL);
-
-	glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
-	glBindVertexArray(m_vao);
-	if (!m_hasBindedOnce) {
-		VertexFormatPtr vf = m_mesh->getVertexFormat();
-		vf->bindData();
-		std::cout << "BINDING MESHMODEL DATA\n";
-		m_hasBindedOnce = true;
-	}
-	//	for (uint8_t i = 0; i < vf->getNumElements(); i++) {
-	//		VertexAttribute* ve = vf->getAttributeByIndex(i);
-	//		ve->m_vbo->uploadData();
-	//	}
-
-	MaterialPtr mat = m_mesh->getMaterial();
-	if (mat) {
-		for (uint8_t i = 0; i < MAX_TEXTURES_STACK; i++) {
-			TexturePtr tex = mat->m_texStack->textures[i];
-			if (tex && tex->m_texID && glIsTexture(tex->m_texID)) {
-				glEnable(tex->m_textureTarget);
-				glActiveTexture(GL_TEXTURE0 + i);
-				glClientActiveTexture(GL_TEXTURE0 + i);
-
-				//				VertexAttribute* ve = vf->getAttributeBySemantic((VertexAttributeSemantic) (Vertex_TexCoord0
-				//						+ mat->m_texStack->texInputs[i].uvSet));
-				//				ve->m_vbo->uploadData();
-			}
-		}
-	}
+//	glBindVertexArray(m_vao);
+//	if (!m_hasBindedOnce) {
+//		VertexFormatPtr vf = m_mesh->getVertexFormat();
+//		vf->bindData();
+//		std::cout << "BINDING MESHMODEL DATA\n";
+//		m_hasBindedOnce = true;
+//	}
 
 	m_mesh->getIbo()->drawPrimitives();
-	glPopClientAttrib();
+
 
 	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 

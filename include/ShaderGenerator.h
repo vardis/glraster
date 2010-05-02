@@ -16,7 +16,7 @@ public:
 	ShaderGenerator();
 	virtual ~ShaderGenerator();
 
-	void generateShaders(const Material& mat, const VertexFormat& vf);
+	void generateShaders(Material& mat, const RenderState& rs, const VertexFormat& vf);
 };
 
 #endif /* SHADERGENERATOR_H_ */

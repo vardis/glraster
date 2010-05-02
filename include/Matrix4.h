@@ -1,6 +1,9 @@
 #ifndef MATRIX4_H_
 #define MATRIX4_H_
 
+#include <iostream>
+#include "Vector.h"
+
 #ifdef USE_EXPORT_KEYWORD
 export
 #endif
@@ -15,6 +18,14 @@ public:
 	Matrix4(T _r00, T _r01, T _r02, T _r03, T _r10, T _r11, T _r12, T _r13, T _r20, T _r21, T _r22, T _r23, T _r30,
 			T _r31, T _r32, T _r33);
 	Matrix4(const Matrix4<T>& _mat);
+
+	/**
+	 * Returns a pointer to the rgba data. This is used to interface with GLSL uniform setters.
+	 * @see GLSLProgram
+	 */
+	T* ptr() {
+		return &m[0][0];
+	}
 
 	const Matrix4<T>& operator=(const Matrix4<T>& _mat);
 
@@ -82,8 +93,10 @@ public:
 	static Matrix4<T> RotationY(T _angle);
 	static Matrix4<T> RotationZ(T _angle);
 
-	static Matrix4<T> RotationEuler(T _yaw, T _pitch, T _roll);
+	template<typename U>
+	friend bool operator==(const Matrix4<U>& m1, const Matrix4<U>& m2);
 };
+
 
 typedef Matrix4<float> Matrix4f;
 typedef Matrix4<double> Matrix4d;

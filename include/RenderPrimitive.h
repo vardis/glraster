@@ -65,7 +65,6 @@ private:
 	uint32_t m_numVertices;
 	uint32_t m_numIndices;
 	bool m_hasIndices;
-	VertexFormatPtr m_vf;
 	GLuint m_vao;
 
 private:
@@ -113,10 +112,6 @@ public:
 		return m_sizePerSemantic;
 	}
 
-	VertexFormatPtr getVf() const {
-		return m_vf;
-	}
-
 	void setHasIndices(bool m_hasIndices) {
 		this->m_hasIndices = m_hasIndices;
 	}
@@ -143,10 +138,6 @@ public:
 
 	void setSizePerSemantic(std::map<VertexAttributeSemantic, uint32_t> m_sizePerSemantic) {
 		this->m_sizePerSemantic = m_sizePerSemantic;
-	}
-
-	void setVf(VertexFormatPtr m_vf) {
-		this->m_vf = m_vf;
 	}
 
 };

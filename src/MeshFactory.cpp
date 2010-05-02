@@ -13,8 +13,8 @@
 #include <assimp.hpp>      // C++ importer interface
 #include <aiScene.h>       // Output data structure
 #include <aiPostProcess.h> // Post processing flags
-MeshFactory::MeshFactory(MaterialDB* matDB, ITextureManager* texMgr) :
-	m_matDB(matDB), m_texMgr(texMgr) {
+MeshFactory::MeshFactory(/*MaterialDB* matDB,*/ITextureManager* texMgr) :
+	/*m_matDB(matDB),*/m_texMgr(texMgr) {
 
 }
 
@@ -24,14 +24,16 @@ MeshFactory::~MeshFactory() {
 Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
 
 	ulong numVertices = 2 + numSegments * (numRings - 1);
+	std::cout << "numVertices " << numVertices << std::endl;
+
 	VertexFormat* vf = VertexFormat::create(VF_V3_N3_T2);
-	VertexAttribute* vaVertices = vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3, 0, 0);
+	VertexAttribute* vaVertices = vf->getAttributeBySemantic(Vertex_Pos);
 	vaVertices->m_vbo->allocate(numVertices);
 
-	VertexAttribute* vaNormals = vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3, 0, 0);
+	VertexAttribute* vaNormals = vf->getAttributeBySemantic(Vertex_Normal);
 	vaNormals->m_vbo->allocate(numVertices);
 
-	VertexAttribute* vaTexCoords = vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3, 0, 0);
+	VertexAttribute* vaTexCoords = vf->getAttributeBySemantic(Vertex_TexCoord0);
 	vaTexCoords->m_vbo->allocate(numVertices);
 
 	float* vertices = reinterpret_cast<float*> (vaVertices->m_vbo->mapData());
@@ -41,63 +43,108 @@ Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
 	// every vertex in an internal ring is shared by 6 triangles, the outmost rings have vertices
 	// that are shared by 5 triangles and the top and bottom vertices are shared by as many triangles
 	// as there are segments
-	uint32_t numIndices = 2 * numSegments * (numRings - 1);
+	uint32_t numIndices = 6 * numSegments * (numRings - 1);
+	std::cout << "numIndices " << numIndices << std::endl;
 
 	IndexArrayPtr ib(new uint32_t[numIndices]);
 	uint32_t* indices = ib.get();
 
 	Vec3f tempNormal;
-	float dLat = M_PI * (1.0f / numRings);
-	float dLong = 2.0f * M_PI * (1.0f / numSegments);
+	float dTheta = M_PI * (1.0f / numRings);
+	float dPhi = 2.0f * M_PI * (1.0f / numSegments);
 	uint32_t currentVertexIdx = 0;
+
+	long idxVe = 0, idxNo = 0, idxUV = 0, idxCnt = 0;
 
 	// start from the bottom vertex and process vertices and triangles of each ring
 	for (uint ring = 0; ring <= numRings; ring++) {
-		float la = ring * dLat;
-		float ringRadius = radius * sinf(la);
+		float theta = ring * dTheta;
 		for (uint segment = 0; segment < numSegments; segment++) {
-			float lo = segment * dLong;
-			float sinPhi = sinf(la);
-			float z = ringRadius * cosf(lo);
-			float x = z * sinPhi;
-			float y = ringRadius * sinf(lo) * sinPhi;
+			float phi = segment * dPhi;
+			float sinTheta = sinf(theta);
+			std::cout << "phi: " << (180.0f / M_PI) * phi << std::endl;
+			std::cout << "theta: " << (180.0f / M_PI) * theta << std::endl;
+			float x = radius * cosf(phi) * sinTheta;
+			float y = radius * cosf(theta);
+			float z = radius * sinf(phi) * sinTheta;
+			if (fabs(x) < 1.0e-6)
+				x = 0.0f;
+			if (fabs(y) < 1.0e-6)
+				y = 0.0f;
+			if (fabs(z) < 1.0e-6)
+				z = 0.0f;
 			*vertices++ = x;
 			*vertices++ = y;
 			*vertices++ = z;
+			idxVe += 3;
 
 			tempNormal.set(x, y, z);
 			tempNormal.normalize();
 			*normals++ = tempNormal.x;
 			*normals++ = tempNormal.y;
 			*normals++ = tempNormal.z;
+			idxNo += 3;
 
 			*uvs++ = float(segment) / numSegments;
-			*uvs++ = float(ring) / numRings;
+			*uvs++ = 1.0f - float(ring) / numRings;
+			idxUV += 2;
 
-			if (ring != (numRings - 1)) {
-				// fill in the indices of the triangle consisting of this vertex, the vertex immediately above the
-				// current and the vertex above and to the right of the current
+			if (ring != 0 && ring != numRings) {
+
+				if (ring != (numRings - 1)) {
+					// fill in the indices of the triangle consisting of this vertex, the vertex above and to the right
+					// of the currentthe vertex immediately above the current
+					*indices++ = currentVertexIdx;
+					if (segment == numSegments - 1) {
+						*indices++ = ring * numSegments + 1;
+					} else {
+						*indices++ = currentVertexIdx + numSegments + 1;
+					}
+					*indices++ = currentVertexIdx + numSegments;
+					idxCnt += 3;
+				}
+
+				// fill in the indices of the triangle consisting of this vertex, the vertex at the right of the current
+				// and the vertex above and to the right of the current
 				*indices++ = currentVertexIdx;
-				*indices++ = currentVertexIdx + numSegments + 1;
-				*indices++ = currentVertexIdx + numSegments;
+				if (segment == numSegments - 1) {
+					*indices++ = currentVertexIdx - segment;
+					*indices++ = ring * numSegments + 1;
+				} else {
+					*indices++ = currentVertexIdx + 1;
+					*indices++ = clamp(currentVertexIdx + numSegments + 1, 0, numVertices - 1);
+				}
+				idxCnt += 3;
 			}
 
-			if (ring != 0) {
-				// fill in the indices of the triangle consisting of this vertex, the vertex above and to the right
-				// of the current and the vertex at the right of the current
+			if (ring == 0) {
+				uint rightAbove = currentVertexIdx + 1;
+				for (uint i = 0, v = rightAbove; i < numSegments - 1; i++, v++) {
+					*indices++ = currentVertexIdx;
+					*indices++ = v + 1;
+					*indices++ = v;
+					idxCnt += 3;
+				}
 				*indices++ = currentVertexIdx;
-				*indices++ = currentVertexIdx + 1;
-				*indices++ = clamp(currentVertexIdx + numSegments + 1, 0, numVertices);
+				*indices++ = rightAbove;
+				*indices++ = rightAbove + numSegments - 1;
+				idxCnt += 3;
 			}
 
 			++currentVertexIdx;
 
 			// first and last rings have a single vertex
 			if (ring == 0 || ring == numRings) {
+				std::cout << "BREAK\n";
 				break;
 			}
 		}
 	}
+
+	std::cout << "indices copied " << idxCnt << std::endl;
+	std::cout << "vertices copied " << idxVe << std::endl;
+	std::cout << "normals copied " << idxNo << std::endl;
+	std::cout << "uvs copied " << idxUV << std::endl;
 
 	vaVertices->m_vbo->unmapData();
 	vaNormals->m_vbo->unmapData();
@@ -111,11 +158,18 @@ Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
 	return sphere;
 }
 
-std::list<Mesh*> MeshFactory::createFromFile(String filename) {
+std::list<Mesh*> MeshFactory::createFromFile(String filename, bool genNormals, bool genUVs) {
 	Assimp::Importer importer;
 	std::list<Mesh*> meshes;
-	const aiScene* model = importer.ReadFile(filename, aiProcess_FixInfacingNormals | aiProcess_Triangulate
-			| aiProcess_CalcTangentSpace);
+
+	int postProcessOpts = aiProcess_FixInfacingNormals | aiProcess_Triangulate | aiProcess_CalcTangentSpace;
+	if (genNormals) {
+		postProcessOpts |= aiProcess_GenSmoothNormals;
+	}
+	if (genUVs) {
+		postProcessOpts |= aiProcess_GenUVCoords;
+	}
+	const aiScene* model = importer.ReadFile(filename, postProcessOpts);
 	if (!model) {
 		std::cerr << importer.GetErrorString() << std::endl;
 	} else {
@@ -123,7 +177,7 @@ std::list<Mesh*> MeshFactory::createFromFile(String filename) {
 		for (uint32_t m = 0; m < model->mNumMaterials; m++) {
 			Material* mat = _readSingleMaterial(model->mMaterials[m]);
 			materials.push_back(mat);
-			m_matDB->addMaterial(mat);
+			//			m_matDB->addMaterial(mat);
 		}
 		for (uint32_t i = 0; i < model->mNumMeshes; i++) {
 			meshes.push_back(_readSingleMesh(model->mMeshes[i], materials));
@@ -237,9 +291,12 @@ Mesh* MeshFactory::createQuad(const Vec3f& center, const Vec3f& facingDir, float
 	*p++ = 2;
 	*p++ = 3;
 
+	vf->printData();
+
 	Mesh* mesh = new Mesh();
 	mesh->updateVertexData(vf, 4);
 	mesh->updateIndexData(indices, 6);
+	mesh->getIbo()->printData();
 	return mesh;
 }
 

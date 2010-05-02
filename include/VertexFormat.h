@@ -238,14 +238,7 @@ public:
 	VertexAttribute* getAttributeBySemantic(VertexAttributeSemantic semantic) const;
 	uint8_t getNumElements() const;
 
-	void bindData() {
-		for (uint8_t i = 0; i < m_numAttributes; i++) {
-			VertexAttribute* ve = getAttributeByIndex(i);
-			ve->m_vbo->uploadData();
-		}
-	}
-
-	//	void printData();
+	void printData();
 private:
 	uint8_t m_numAttributes;
 	VertexAttributePtr m_attributes[MAX_VERTEX_ELEMENTS];

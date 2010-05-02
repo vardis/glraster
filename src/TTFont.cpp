@@ -125,11 +125,11 @@ bool TTFont::create() {
 				Codepoint cp;
 				cp.m_codepoint = i;
 				cp.m_width = m_ftFace->glyph->advance.x >> 6;
-				cp.m_height = m_maxHeight - offset;
+				cp.m_height = m_maxHeight;// - offset;
 				cp.m_u0 = imgX / (float) texImg.getWidth();
 				cp.m_u1 = cp.m_u0 + (cp.m_width / (float) texImg.getWidth());
-				cp.m_v0 = imgY / (float) texImg.getHeight();
-				cp.m_v1 = cp.m_v0 + (cp.m_height / (float) texImg.getHeight());
+				cp.m_v0 = (imgY + 1.0f) / (float) texImg.getHeight();
+				cp.m_v1 = cp.m_v0 + (cp.m_height / (float) texImg.getHeight());// + (2.5f / texImg.getHeight());
 				cp.m_bearingX = m_ftFace->glyph->metrics.horiBearingX >> 6;
 				m_codepoints.push_back(cp);
 			}
@@ -155,14 +155,17 @@ bool TTFont::create() {
 	m_tex->m_magFilter = TexFilter_Bilinear;
 	m_tex->m_useMipmaps = false;
 	m_tex->m_wrapping = TexWrapMode_Clamp;
+	m_tex->m_hasAlpha = true;
 
 	Material* mat = new Material();
-	mat->m_diffuse.set(1.0f);
+	mat->m_diffuse.set(0.0f);
+	mat->m_ambient.set(0.0f);
 	mat->m_specular.set(0.0f);
 	mat->m_emissive.set(0.0f);
 	mat->m_name = m_filename;
 	mat->m_opacity = 1.0f;
 	mat->m_shininess = 0.0f;
+	mat->m_shadeless = true;
 	mat->m_transparent = true;
 	mat->m_twoSided = false;
 	mat->m_texStack.reset(new TextureStack());

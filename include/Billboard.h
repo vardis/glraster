@@ -20,16 +20,14 @@ class Billboard: public Renderable {
 private:
 	BillboardType m_type;
 	Vec3f         m_upAxis;
-
-#ifdef EXPERIMENTAL_CODE
 	RenderPrimitive<TrianglesPrimitiveType>* m_render;
-#endif
+
 
 public:
 	Billboard(BillboardType type, float width, float height);
 
 	virtual void renderGeometry();
-	virtual void postViewTransform(PinholeCameraPtr cam);
+	virtual void postViewTransform(Matrix4f& xform);
 };
 
 #endif /* BILLBOARD_H_ */

@@ -8,7 +8,6 @@
 #ifndef GLSLPROGRAM_H_
 #define GLSLPROGRAM_H_
 
-#include "Colour.h"
 #include "GLSLShader.h"
 
 class GLSLProgram {
@@ -50,18 +49,34 @@ public:
 	// The family of functions below provide a uniform interface for setting values for a program's uniform
 	// variables
 	template<typename T>
-	void setUniform(const char* uniformName, T value);
+	void setUniform(const char* uniformName, T& value);
 
 	template<typename T>
-	void setUniform(const String& uniformName, T value);
+	void setUniform(const String& uniformName, T& value);
 
+	/**
+	 * Generic uniform setters, every T instance must have a method 'void* ptr()' that returns
+	 * a pointer to the actual data that need to be bound at that uniform location.
+	 * @param uniformLoc the uniform location index
+	 * @param value any instance of a class that provides the above mentioned ptr() function
+	 */
+	template<typename T>
+	void setUniform(int uniformLoc, T& value);
+
+	/** Specialization of setUniform<T> for integer uniforms */
 	void setUniform(int uniformLoc, int value);
 
+	/** Specialization of setUniform<T> for unsigned integer uniforms */
 	void setUniform(int uniformLoc, unsigned int value);
 
-	void setUniform(int uniformLoc, float value);
+	/** Specialization of setUniform<T> for matrices */
+	void setUniform(int uniformLoc, Matrix4f& mat);
 
-	void setUniform(int uniformLoc, Colour& value);
+	/** Specialization of setUniform<T> for 3 component vectors */
+	void setUniform(int uniformLoc, Vec3f& vec);
+
+	/** Specialization of setUniform<T> for floating point uniforms */
+	void setUniform(int uniformLoc, float value);
 	//-------------------------------------------------------------------------------------
 
 	/**

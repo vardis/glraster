@@ -19,26 +19,38 @@ NUM_TEXTURES : number of active texture units
 
 }}
 
-uniform mat4 u_Model;
-uniform mat4 u_View;
-uniform mat4 u_Proj;
-uniform mat4 u_ModelView;
-uniform mat4 u_ModelViewProjection;
+row_major uniform mat4 u_Model;
+row_major uniform mat4 u_View;
+row_major uniform mat4 u_Proj;
+row_major uniform mat4 u_ModelView;
+row_major uniform mat4 u_ModelViewProjection;
+
+struct Material_t {
+	vec4 ambient;
+	vec4 diffuse;
+	vec4 specular;
+	float shininess;
+	float opacity;
+};
+uniform Material_t u_Material;
 
 {{#HAS_NORMALS}}
-uniform mat3 u_NormalMatrix;
+row_major uniform mat3 u_NormalMatrix;
 {{/HAS_NORMALS}}
 
 {{#SINGLE_SAMPLER_DECL}}
 uniform {{SAMPLER_SPEC}} u_Sampler{{TEX_INDEX}};
 {{/SINGLE_SAMPLER_DECL}}
 
+{{#HAS_TEXTURES}}
 uniform vec4 u_TexEnvColors[{{NUM_TEXTURES}}];
+{{/HAS_TEXTURES}}
 
 uniform int u_NumTextures;
 
 {{#USE_LIGHTING}}
 
+// Important: these values must match the respective constants in Lights.h
 #define LT_Directional 1
 #define LT_Lamp 2
 #define LT_Spot 3
@@ -46,18 +58,19 @@ uniform int u_NumTextures;
 // all vectors are specified in camera space and directional vectors are normalized
 struct Light_t {
 	int type;
-	vec3 pos;	// for directional lights this is equal to the direction 
+	vec3 pos;	
 	vec3 dir;
 	vec4 ambient;
 	vec4 diffuse;
 	vec4 specular;
 	float cosSpotCutOff;	// cosine of the spot cut-off angle
-	float attenuation;
+	float constAttenuation;
 	float linearAttenuation;
 	float quadraticAttenuation;
 };
 
-uniform Light_t u_Lights[]; 
+uniform int u_NumLights;
+uniform Light_t u_Lights[8]; 
 
 {{/USE_LIGHTING}}
 

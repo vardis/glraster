@@ -14,9 +14,9 @@
 class MeshModel: public Renderable {
 
 protected:
-	MeshPtr     m_mesh;
-	GLuint      m_vao;
-	bool        m_hasBindedOnce;
+	MeshPtr m_mesh;
+	GLuint m_vao;
+	bool m_hasBindedOnce;
 
 public:
 	MeshModel(Mesh* mesh);
@@ -28,6 +28,10 @@ public:
 
 	virtual MaterialPtr getMaterial() {
 		return m_mesh->getMaterial();
+	}
+
+	virtual void setMaterial(MaterialPtr mat) {
+		m_mesh->setMaterial(mat);
 	}
 
 	virtual void renderGeometry();

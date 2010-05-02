@@ -35,12 +35,13 @@ class GLException: public std::exception {
 
 private:
 	enum ErrorCode m_code;
-	const char*    m_details;
+	const char* m_details;
+	GLenum m_glError;
 
 public:
 	GLException(enum ErrorCode code, const char* details = 0) :
 		std::exception(), m_code(code), m_details(details) {
-
+		m_glError = glGetError();
 	}
 
 	virtual const char* what() const throw () {
@@ -51,7 +52,43 @@ public:
 		return m_details;
 	}
 
+	const char* glError() const {
+		return glErrorEnumToString(m_glError);
+	}
+
 private:
+
+	const char* glErrorEnumToString(GLenum e) const {
+		switch (e) {
+		case GL_NO_ERROR:
+			return "GL_NO_ERROR";
+			break;
+		case GL_INVALID_ENUM:
+			return "GL_INVALID_ENUM";
+			break;
+		case GL_INVALID_VALUE:
+			return "GL_INVALID_VALUE";
+			break;
+		case GL_INVALID_OPERATION:
+			return "GL_INVALID_OPERATION";
+			break;
+		case GL_STACK_OVERFLOW:
+			return "GL_STACK_OVERFLOW";
+			break;
+		case GL_STACK_UNDERFLOW:
+			return "GL_STACK_UNDERFLOW";
+			break;
+		case GL_OUT_OF_MEMORY:
+			return "GL_OUT_OF_MEMORY";
+			break;
+		case GL_TABLE_TOO_LARGE:
+			return "GL_TABLE_TOO_LARGE";
+			break;
+		default:
+			return "n/a";
+		}
+	}
+
 	const char* errorCodeToString(enum ErrorCode code) const {
 		switch (code) {
 		case E_BADOP:

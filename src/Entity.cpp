@@ -16,7 +16,11 @@ Entity::~Entity() {
 }
 
 void Entity::addRenderable(Renderable* r) {
-	m_renderables.push_back(RenderablePtr(r));
+	this->addRenderable(RenderablePtr(r));
+}
+
+void Entity::addRenderable(RenderablePtr r) {
+	m_renderables.push_back(r);
 	m_bounds.unionWith(r->getBounds());
 }
 

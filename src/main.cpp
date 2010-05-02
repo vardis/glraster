@@ -9,7 +9,11 @@
 #include "Entity.h"
 #include "Viewport.h"
 #include "RenderTargetTexture.h"
+
 #include "PinholeCamera.h"
+#include "OrthographicCamera.h"
+
+#include "Lights.h"
 #include "SceneManager.h"
 #include "ILTextureManager.h"
 #include "RenderablesRasterizer.h"
@@ -63,18 +67,22 @@ Entity* multiMat;
 Entity* planeEntity;
 Entity* quadStripEnt;
 Entity* maleEntity;
+Entity* teapotEntity;
 
 RenderTargetTexture* g_planeTextureRT;
 PinholeCameraPtr g_camera;
 ViewportPtr g_viewport;
-SceneManager scene;
+SceneManagerPtr scene;
 RenderablesRasterizer* g_rasterizer;
 ILTextureManager* g_texMgr;
 
 TTFontPtr g_font;
 TextPtr g_text;
+OrthographicCameraPtr g_cam2d;
 
-void displayFunc(void);
+LightPtr frontLight, backLight;
+
+void displayFunc();
 void reshapeFunc(int width, int height);
 void keyboardFunc(unsigned char key, int x, int y);
 void mouseFunc(int buton, int state, int x, int y);
@@ -98,13 +106,14 @@ int main(int argc, char** argv) {
 		glutInitWindowPosition(10, 10);
 		glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE | GLUT_ALPHA | GLUT_DEPTH);
 
-		glutInitContextVersion (3, 2);
-		glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
-//		glutInitContextFlags (GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
-
+		glutInitContextVersion(3, 2);
+		glutInitContextProfile( GLUT_COMPATIBILITY_PROFILE);
+		glutInitContextFlags(GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
 
 		int mainWinID = glutCreateWindow("mainWin");
+		glutSetWindow(mainWinID);
 
+		glewExperimental = GL_TRUE;
 		GLenum err = glewInit();
 		if (GLEW_OK != err) {
 			/* Problem: glewInit failed, something is seriously wrong. */
@@ -112,7 +121,6 @@ int main(int argc, char** argv) {
 			return 1;
 		}
 
-		glutSetWindow(mainWinID);
 		glutSetWindowTitle("OpenGL Tutor ver. 0.0.0.1");
 
 		// set callbacks
@@ -137,6 +145,7 @@ int main(int argc, char** argv) {
 	} catch (GLException& e) {
 		std::cerr << "Caught a GLException: " << e.what() << std::endl;
 		std::cerr << "Details: " << e.details() << std::endl;
+		std::cerr << "GL error: " << e.glError() << std::endl;
 	}
 	return 0;
 }
@@ -160,37 +169,65 @@ void initialize() {
 	yaw = pitch = roll = 0.0f;
 
 	g_camera = PinholeCameraPtr(new PinholeCamera());
-	g_camera->setPos(Vec3f(0, 0, 0));
-	g_camera->setRotation(Vec3f(yaw, pitch, roll));
+	g_camera->setPos(Vec3f(0, 0, 5));
+	g_camera->setLook(Vec3f::Zero);
 	g_camera->setNear(0.1f);
 	g_camera->setFar(1000.0f);
 	g_camera->setFov(60.0f);
 	g_camera->setAspectRatio(0.75f);
 
+	g_cam2d = OrthographicCameraPtr(new OrthographicCamera());
+	g_cam2d->setPos(Vec3f(0, 0, 0));
+	g_cam2d->setRotation(Vec3f(0.0f, 0.0f, 0.0f));
+	g_cam2d->setNear(0.1f);
+	g_cam2d->setFar(1000.0f);
+	g_cam2d->setWidth(640);
+	g_cam2d->setHeight(480);
+
 	g_texMgr = new ILTextureManager();
-	g_rasterizer = new RenderablesRasterizer(g_texMgr, &g_matDB);
-	scene.setTextureManager(g_texMgr);
-	scene.setActiveSkyMapType(Sky_SphereMap);
-	scene.setSphereSkyMap("spheremap.png");
-	//	scene.setActiveSkyMapType(Sky_CubeMap);
-	//	scene.setCubeSkyMap("stevecube.jpg");
+	g_rasterizer = new RenderablesRasterizer(g_texMgr);
 
 	g_font.reset(new TTFont());
 	g_font->setFilename("bluebold.ttf");
 	g_font->addCodepointRange(CodepointRange(32, 166));
-	g_font->setPointSize(3);
-	g_font->setHres(800);
-	g_font->setVres(600);
+	g_font->setPointSize(7);
+	g_font->setHres(300);
+	g_font->setVres(200);
 	if (!g_font->create()) {
 		std::cerr << "Error creating font\n";
 	}
 
+	frontLight = LightPtr(new Light());
+	frontLight->m_type = Light::LightsTypeDirectional;
+	frontLight->m_direction = Vec3f::Z_Neg_Axis;
+	frontLight->m_diffuse = Colour::WHITE;
+	frontLight->m_specular = Colour::WHITE;
+
+	backLight = LightPtr(new Light());
+	backLight->m_type = Light::LightsTypeDirectional;
+	backLight->m_direction = Vec3f::Z_Axis;
+	backLight->m_diffuse = Colour::WHITE;
+	backLight->m_specular = Colour::WHITE;
+
+	g_rasterizer->addLight(frontLight);
+	g_rasterizer->addLight(backLight);
+
 	loadModels();
+
+	scene = SceneManagerPtr(new SceneManager());
+	scene->setTextureManager(g_texMgr);
+	scene->initialize();
+
+	//	scene->setActiveSkyMapType(Sky_SphereMap);
+	//	scene->setSphereSkyMap("spheremap.png");
+	scene->setActiveSkyMapType(Sky_CubeMap);
+	scene->setCubeSkyMap("stevecube.jpg");
 }
 
 void loadModels() {
 
-	MeshFactory mf(&g_matDB, g_texMgr);
+	ShaderGenerator sg;
+	MeshFactory mf(g_texMgr);
 
 	///////////////////////////////////////////////////////////////////////
 	// create multi-material cube
@@ -224,7 +261,6 @@ void loadModels() {
 
 	///////////////////////////////////////////////////////////////////////
 	// create male figure mesh
-	ShaderGenerator sg;
 	std::list<Mesh*> maleMeshes = mf.createFromFile("muscular_male_basemesh.obj");
 	maleEntity = new Entity();
 	it = maleMeshes.begin();
@@ -232,41 +268,72 @@ void loadModels() {
 		MeshModel* maleModel = new MeshModel(*it);
 		maleModel->getMaterial()->m_texStack->textures[0]->setMinFilter(TexFilter_Bilinear_Mipmap_Bilinear);
 		maleModel->getMaterial()->m_texStack->textures[0]->setAnisotropy(8);
-		maleModel->getMaterial()->m_texStack->texOutputs[0].mapTo = TexMapTo_Shininess;
 		maleEntity->addRenderable(maleModel);
-
-		maleModel->getMaterial()->m_texStack->texInputs[0].mapping = TexMapInput_ObjectSpace;
-		sg.generateShaders(*maleModel->getMaterial(), *maleModel->getMesh()->getVertexFormat());
-
 		++it;
 	}
 	Matrix4f& m1 = maleEntity->getTransform();
-	m1 = Matrix4f::Scale(0.4f, 0.4f, 0.4f) * m1;
+	m1 = Matrix4f::Translation(0.0f, 0.0f, -3.0f) * Matrix4f::Scale(0.4f, 0.4f, 0.4f) * m1;
 
+	///////////////////////////////////////////////////////////////////////
+
+	///////////////////////////////////////////////////////////////////////
+	// create teapot mesh
+	{
+		//		Texture* tex = new Texture();
+		//		tex->m_useMipmaps = false;
+		//		g_texMgr->loadTexture("gloss.png", tex);
+
+		std::list<Mesh*> teapotMeshes = mf.createFromFile("teapot.obj", true, true);
+		teapotEntity = new Entity();
+		it = teapotMeshes.begin();
+		while (it != teapotMeshes.end()) {
+			MeshModel* teapotModel = new MeshModel(*it);
+			teapotModel->getRenderState().setCulling(false);
+
+			//			MaterialPtr mat = teapotModel->getMaterial();
+			//			mat->m_texStack->textures[0].reset(tex);
+			//			mat->m_texStack->texOutputs[0].mapTo = TexMapTo_CSpecular;
+
+			teapotEntity->addRenderable(teapotModel);
+			++it;
+		}
+
+		Matrix4f& m1 = teapotEntity->getTransform();
+		m1 = Matrix4f::Translation(4.0f, 0.4f, -2.0f) * m1;
+	}
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
 	// create billboard of vegetation
 	MaterialPtr billboardMat(new Material());
-	billboardMat->m_name = "billboardMat";
-	billboardMat->m_twoSided = true;
-	billboardMat->m_diffuse.set(1.0f);
-	//	billboardMat->m_fragmentShader = "fs.glsl";
-	billboardMat->m_texStack = TextureStackPtr(new TextureStack());
+	{
+		billboardMat->m_name = "billboardMat";
+		billboardMat->m_twoSided = true;
+		billboardMat->m_diffuse.set(1.0f);
+		billboardMat->m_specular.set(0.0f);
+		billboardMat->m_shadeless = true;
+		//	billboardMat->setCustomShaders(true);
+		//	billboardMat->setFragmentShader("fs.glsl");
+		billboardMat->m_texStack = TextureStackPtr(new TextureStack());
 
-	Texture* tex = new Texture();
-	tex->m_useMipmaps = true;
-	tex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
-	tex->m_magFilter = TexFilter_Bilinear;
-	g_texMgr->loadTexture(/*"fgrass1_v2_256.png"*/"waves2.dds", tex);
+		Texture* tex = new Texture();
+		tex->m_useMipmaps = true;
+		tex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
+		tex->m_magFilter = TexFilter_Bilinear;
+		g_texMgr->loadTexture(/*"fgrass1_v2_256.png" */"waves2.dds", tex);
 
-	billboardMat->m_texStack->textures[0].reset(tex);
-	billboardMat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
+		billboardMat->m_texStack->textures[0].reset(tex);
+		billboardMat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
 
-	Billboard* bb = new Billboard(Billboard_Spherical, 1.0f, 1.0f);
-	bb->setMaterial(billboardMat);
-	billboardEntity = new Entity();
-	billboardEntity->addRenderable(bb);
+		Billboard* bb = new Billboard(Billboard_Spherical, 1.0f, 1.0f);
+		bb->setMaterial(billboardMat);
+		bb->getRenderState().setCulling(false);
+		billboardEntity = new Entity();
+		billboardEntity->addRenderable(bb);
+
+		Matrix4f& m1 = billboardEntity->getTransform();
+		m1 = Matrix4f::Translation(-4.0f, 0.0f, 0.0f) * m1;
+	}
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
@@ -301,10 +368,15 @@ void loadModels() {
 	quadStripEnt = new Entity();
 	quadStripEnt->addRenderable(qs);
 
+	Matrix4f& stripMat = quadStripEnt->getTransform();
+	stripMat = Matrix4f::Translation(4.0f, 0.0f, 0.0f);
+
 	///////////////////////////////////////////////////////////////////////
 
 	g_text.reset(new Text(g_font));
-	g_text->setPos(10, 10);
+	//	g_text->setPos(100 - g_viewport->m_width/2, 100 - g_viewport->m_height/2);
+	Matrix4f& mtxt = g_text->getTransform();
+	mtxt = Matrix4f::Translation(10 - g_viewport->m_width / 2, 10 - g_viewport->m_height / 2, 0.0f) * mtxt;
 	g_text->setText("hello");
 
 	///////////////////////////////////////////////////////////////////////
@@ -342,19 +414,19 @@ void loadModels() {
 	///////////////////////////////////////////////////////////////////////
 }
 
+void displayFunc() {
 
-void displayFunc(void) {
-
-	glDisable(GL_CULL_FACE);
+	//	glDisable(GL_CULL_FACE);
 
 	yaw = clamp(yaw, -360.0f, 360.0f);
 	pitch = clamp(pitch, -90.0f, 90.0f);
 	roll = clamp(roll, -360.0f, 360.0f);
 	g_camera->updateViewProj();
+	g_cam2d->updateViewProj();
 
-	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	//	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-	rtt(g_planeTextureRT);
+	//	rtt(g_planeTextureRT);
 	render(g_camera, g_viewport);
 
 	long elapsed = timer.getMillis();
@@ -363,38 +435,30 @@ void displayFunc(void) {
 	if (g_lastTime > 1000) {
 		std::stringstream ss;
 		ss << "Frame time: " << elapsed << " ms";
+
+		g_text->setTransform(Matrix4f::Translation(10 - g_viewport->m_width / 2, 10 - g_viewport->m_height / 2, 0.0f));
 		g_text->setText(ss.str());
 		g_lastTime -= 1000;
 	}
 
-	g_rasterizer->setRender2D(800, 600);
-	g_rasterizer->render(g_text.get(), g_camera);
+	//	g_rasterizer->render(g_text.get(), g_cam2d);
 
-	glFlush();
 	glutSwapBuffers();
 }
 
 void render(PinholeCameraPtr camera, ViewportPtr viewport) {
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glMultTransposeMatrixf(&camera->getProj().m[0][0]);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glMultTransposeMatrixf(&camera->getView().m[0][0]);
+	//	glEnable(GL_DEPTH_TEST);
+	//	glDepthFunc(GL_LEQUAL);
 
 	glViewport(viewport->m_x, viewport->m_y, viewport->m_width, viewport->m_height);
 	glClearColor(viewport->m_clearColor.r, viewport->m_clearColor.g, viewport->m_clearColor.b, viewport->m_clearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glPushMatrix();
-	Vec3f& p = g_camera->getPos();
-	glTranslatef(p.x, p.y, p.z);
-	scene.renderSky();
-	glPopMatrix();
+	//	glPushMatrix();
+	//	Vec3f& p = g_camera->getPos();
+	//	glTranslatef(p.x, p.y, p.z);
+	//	scene->renderSky(g_rasterizer);
+	//	glPopMatrix();
 
 
 	// render Bob
@@ -411,28 +475,36 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 		g_rasterizer->getRenderLayer(0).addRenderable(r);
 	}
 
+	// render teapot
+	for (uint32_t i = 0; i < teapotEntity->getNumRenderables(); i++) {
+		Renderable* r = teapotEntity->getRenderable(i);
+		r->setTransform(teapotEntity->getTransform());
+		g_rasterizer->getRenderLayer(0).addRenderable(r);
+	}
+
 	// render billboard
 	Renderable* bb = billboardEntity->getRenderable(0);
 	bb->setTransform(billboardEntity->getTransform());
 	g_rasterizer->getRenderLayer(0).addRenderable(bb);
 
-	// render quad strip
-	//		Renderable* qs = quadStripEnt->getRenderable(0);
-	//		qs->setTransform(quadStripEnt->getTransform());
-	//		g_rasterizer->getRenderLayer(0).addRenderable(qs);
+	/*
+	 // render quad strip
+	 Renderable* qs = quadStripEnt->getRenderable(0);
+	 qs->setTransform(quadStripEnt->getTransform());
+	 g_rasterizer->getRenderLayer(0).addRenderable(qs);
 
-	// render multi-material cube
-	for (uint32_t i = 0; i < multiMat->getNumRenderables(); i++) {
-		Renderable* r = multiMat->getRenderable(i);
-		r->setTransform(multiMat->getTransform());
-		g_rasterizer->getRenderLayer(0).addRenderable(r);
-	}
+	 // render multi-material cube
+	 for (uint32_t i = 0; i < multiMat->getNumRenderables(); i++) {
+	 Renderable* r = multiMat->getRenderable(i);
+	 r->setTransform(multiMat->getTransform());
+	 g_rasterizer->getRenderLayer(0).addRenderable(r);
+	 }
 
-	// render reflective plane
-	Renderable* pl = planeEntity->getRenderable(0);
-	pl->setTransform(planeEntity->getTransform());
-	g_rasterizer->getRenderLayer(0).addRenderable(pl);
-
+	 // render reflective plane
+	 Renderable* pl = planeEntity->getRenderable(0);
+	 pl->setTransform(planeEntity->getTransform());
+	 g_rasterizer->getRenderLayer(0).addRenderable(pl);
+	 */
 	g_rasterizer->beginFrame(camera);
 	g_rasterizer->endFrame();
 }
@@ -452,15 +524,6 @@ void rtt(RenderTargetTexture* rt) {
 	rttCamera->setFov(90.0f);
 	rttCamera->updateView();
 	rttCamera->updateProj();
-
-	glMatrixMode(GL_PROJECTION);
-	//	glLoadIdentity();
-	//	glMultTransposeMatrixf(&rttCamera->getProj().m[0][0]);
-	glLoadTransposeMatrixf(&rttCamera->getProj().m[0][0]);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadTransposeMatrixf(&rttCamera->getView().m[0][0]);
-	//	glMultTransposeMatrixf(&rttCamera->getView().m[0][0]);
 
 	g_planeTextureRT->bind();
 
@@ -490,11 +553,14 @@ void rtt(RenderTargetTexture* rt) {
 }
 
 void reshapeFunc(int width, int height) {
-	glViewport(0, 0, width, height);
 	float aspectRatio;
 	height = (height == 0) ? 1 : height;
 	g_viewport->m_width = width;
 	g_viewport->m_height = height;
+
+	g_cam2d->setWidth(width);
+	g_cam2d->setHeight(height);
+
 	aspectRatio = (float) height / (float) width;
 	g_camera->setAspectRatio(aspectRatio);
 }
@@ -510,6 +576,10 @@ void keyboardFunc(unsigned char key, int x, int y) {
 	} else if (key == 'd') {
 		camMoved = true;
 		g_camera->right(.5f);
+	} else if (key == 'r') {
+		camMoved = true;
+		g_camera->setPos(5.0f, 2.0f, 10.0f);
+		g_camera->setLook(Vec3f::Zero);
 	}
 }
 
@@ -520,6 +590,14 @@ void mouseMotionFunc(int x, int y) {
 }
 
 void mousePassiveMotionFunc(int x, int y) {
+}
+
+std::ostream& operator<<(std::ostream& os, Matrix4f mat) {
+	os << "\n[" << mat.m[0][0] << " , " << mat.m[0][1] << " , " << mat.m[0][2] << " , " << mat.m[0][3] << "]\n";
+	os << "[" << mat.m[1][0] << " , " << mat.m[1][1] << " , " << mat.m[1][2] << " , " << mat.m[1][3] << "]\n";
+	os << "[" << mat.m[2][0] << " , " << mat.m[2][1] << " , " << mat.m[2][2] << " , " << mat.m[2][3] << "]\n";
+	os << "[" << mat.m[3][0] << " , " << mat.m[3][1] << " , " << mat.m[3][2] << " , " << mat.m[3][3] << "]\n";
+	return os;
 }
 
 void specialKeyFunc(int key, int x, int y) {
@@ -540,6 +618,8 @@ void specialKeyFunc(int key, int x, int y) {
 		g_camera->up(.4f);
 	} else if (key == GLUT_KEY_END) {
 		g_camera->down(.4f);
+	} else if (key == GLUT_KEY_F1) {
+		std::cout << g_camera->getView();
 	} else {
 		camMoved = false;
 	}
@@ -554,6 +634,8 @@ void idleFunc(void) {
 				<< g_camera->getRotation().x << ", " << g_camera->getRotation().z << std::endl;
 		std::cout << "cam look-at (x, y, z): " << g_camera->getLook().x << ", " << g_camera->getLook().y << ", "
 				<< g_camera->getLook().z << std::endl;
+		std::cout << "cam up (x, y, z): " << g_camera->getUp().x << ", " << g_camera->getUp().y << ", "
+				<< g_camera->getUp().z << std::endl;
 		std::cout << "cam right (x, y, z): " << g_camera->getRight().x << ", " << g_camera->getRight().y << ", "
 				<< g_camera->getRight().z << std::endl;
 		camMoved = false;
@@ -562,6 +644,6 @@ void idleFunc(void) {
 }
 
 void closeFunc() {
-	scene.dispose();
+
 }
 

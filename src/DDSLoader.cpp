@@ -120,7 +120,7 @@ TexturePtr DDSLoader::loadTexture(const String& filename) {
 	// DDSD_DEPTH must be set for volume textures
 	bool doSwap = false;
 	size_t blockBytes, divSize;
-	GLenum sourceFormat, dataType;
+	GLenum sourceFormat = GL_BGRA, dataType = GL_UNSIGNED_BYTE;
 	TexturePtr tex(new Texture());
 	if (PF_IS_DXT1(header.ddpf)) {
 		tex->m_internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;

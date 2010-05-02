@@ -6,10 +6,10 @@ Vertex Shader Inputs
 vec3 vs_VertexPos: vertex position
 vec3 vs_Normal: vertex normal
 vec4 vs_Color: vertex color 
-vec4 vs_TexCoords[NUM_UV_SETS] : array of texture coordinates
+vec2 vs_TexCoords[NUM_UV_SETS] : array of texture coordinates
 }}
 
-#version 150
+#version 150 core
 
 {{>VERTEX_INPUTS}}
 {{>FRAGMENT_INPUTS}}
@@ -19,12 +19,13 @@ vec4 vs_TexCoords[NUM_UV_SETS] : array of texture coordinates
 
 
 {{! vertex shader }}
-void vs_main() {
-	gl_Position = u_ModelViewProjection * vs_VertexPos;
-	vec3 viewPos = u_ModelView * vs_VertexPos;
+void main() {
+	vec4 hPos = vec4(vs_VertexPos, 1.0);
+	gl_Position = u_ModelViewProjection * hPos;
+	fs_eyePos = vec3(u_ModelView * hPos);
 
 {{#HAS_NORMALS}}
-	fs_normal = u_NormalMatrix * vs_Normal;
+	fs_Normal = /*u_NormalMatrix * */vs_Normal;
 
 {{#NORMALIZE_NORMALS}} 
 	fs_Normal = normalize(fs_Normal);
@@ -37,10 +38,7 @@ void vs_main() {
 {{/HAS_COLORS}}
 
 {{>TEX_COORDS_GEN}}
-
 }
 
-{{! fragment shader }}
-void fs_main() {
-}
+
 

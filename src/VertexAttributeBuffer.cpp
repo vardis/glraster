@@ -62,57 +62,14 @@ void VertexAttributeBuffer::unbind() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-#ifdef EXPERIMENTAL_CODE
 void VertexAttributeBuffer::bindAttributeData(GLuint attributeIndex) {
 
 	this->bind();
+	glVertexAttribPointer(attributeIndex, VertexAttribute::getFormatElementCount(m_ve->m_format),
+			VertexAttribute::getFormatType(m_ve->m_format), false, 0, BUFFER_OFFSET(0));
 	glEnableVertexAttribArray(attributeIndex);
-	glVertexAttribPointer(
-			attributeIndex,
-			VertexAttribute::getFormatElementCount(m_ve->m_format),
-			VertexAttribute::getFormatType(m_ve->m_format),
-			false,
-			0,
-			BUFFER_OFFSET(0));
 }
-#endif
 
-void VertexAttributeBuffer::uploadData() {
-
-	this->bind();
-
-	switch (m_ve->m_semantic) {
-	case Vertex_Pos:
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(VertexAttribute::getFormatElementCount(m_ve->m_format), VertexAttribute::getFormatType(
-				m_ve->m_format), 0, BUFFER_OFFSET(0));
-		break;
-
-	case Vertex_Color:
-		glEnableClientState(GL_COLOR_ARRAY);
-		glColorPointer(VertexAttribute::getFormatElementCount(m_ve->m_format), VertexAttribute::getFormatType(
-				m_ve->m_format), 0, BUFFER_OFFSET(0));
-		break;
-	case Vertex_Normal:
-		glEnableClientState(GL_NORMAL_ARRAY);
-		glNormalPointer(VertexAttribute::getFormatType(m_ve->m_format), 0, BUFFER_OFFSET(0));
-		break;
-	case Vertex_TexCoord0:
-	case Vertex_TexCoord1:
-	case Vertex_TexCoord2:
-	case Vertex_TexCoord3:
-	case Vertex_TexCoord4:
-	case Vertex_TexCoord5:
-	case Vertex_TexCoord6:
-	case Vertex_TexCoord7:
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glTexCoordPointer(VertexAttribute::getFormatElementCount(m_ve->m_format), VertexAttribute::getFormatType(
-				m_ve->m_format), 0, BUFFER_OFFSET(0));
-	default:
-		//TODO: error reporting
-		break;
-	}
-}
 
 void* VertexAttributeBuffer::mapData(GLenum accessType) {
 	assert(!m_mapped);
@@ -147,9 +104,11 @@ void* VertexAttributeBuffer::mapSubData(GLbitfield accessType, uint32_t offset, 
 }
 
 void VertexAttributeBuffer::unmapData() {
-	this->bind();
-	glUnmapBuffer(GL_ARRAY_BUFFER);
-	m_mapped = 0;
+	if (m_mapped) {
+		this->bind();
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+		m_mapped = 0;
+	}
 }
 
 void VertexAttributeBuffer::printData() {

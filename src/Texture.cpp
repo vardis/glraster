@@ -47,6 +47,7 @@ void Texture::setMipmapData(uint8_t level, GLenum sourceFormat, GLenum dataType,
 	if (m_textureTarget == GL_TEXTURE_1D) {
 		glTexSubImage1D(GL_TEXTURE_1D, level, 0, levelWidth, sourceFormat, dataType, data);
 	} else if (m_textureTarget == GL_TEXTURE_2D) {
+		std::cout << ">>>>>>tex sub image 2d with level " << (int)level << "\n";
 		glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, levelWidth, levelHeight, sourceFormat, dataType, data);
 	} else {
 		SAFE_THROW(GLException(E_NOTIMPL));
@@ -100,8 +101,7 @@ void Texture::allocate(GLenum internalFormat, void* data, uint32_t compressedSiz
 		break;
 	default:
 		// TODO: support more texture types
-		SAFE_THROW(GLException(E_NOTIMPL))
-		;
+		SAFE_THROW(GLException(E_NOTIMPL));
 	}
 
 	if (m_useMipmaps && !this->isCompressed()) {
@@ -159,8 +159,8 @@ void Texture::fromImage(const Image& img) {
 		glPopClientAttrib();
 
 		m_useMipmaps = img.hasMipmaps();
-		uint mipMapCount = (img.hasMipmaps() ? img.getNumMipmaps() + 1 : 1);
-		for (unsigned int level = 0; level < mipMapCount; ++level) {
+		uint mipMapCount = (img.hasMipmaps() ? img.getNumMipmaps() + 1 : 0);
+		for (unsigned int level = 1; level < mipMapCount; ++level) {
 			if (this->isCompressed()) {
 				this->setCompressedMipmapData(level, img.getMipmap(level).m_compressedSize, img.getData(level));
 			} else {
@@ -171,6 +171,8 @@ void Texture::fromImage(const Image& img) {
 		if (!img.hasMipmaps() && m_useMipmaps && !isCompressed()) {
 			glGenerateMipmap(m_textureTarget);
 		}
+
+		this->configureGLState();
 	}
 }
 

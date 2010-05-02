@@ -29,12 +29,13 @@ private:
 	std::vector<LightPtr> m_activeLights;
 
 public:
-	RenderablesRasterizer(ITextureManager* texMgr, MaterialDB* matDB);
+	RenderablesRasterizer(ITextureManager* texMgr);
 	virtual ~RenderablesRasterizer();
 
-	void beginFrame(PinholeCameraPtr cam);
+	void beginFrame(CameraPtr cam);
 	void endFrame();
-	void render(Renderable* r, PinholeCameraPtr cam, uint16_t materialOverride = NULL_MATERIAL_INDEX);
+	void render(Renderable* r, CameraPtr cam, uint16_t materialOverride = NULL_MATERIAL_INDEX);
+
 	RenderLayer& getRenderLayer(uint8_t i) {
 		return m_layers[i];
 	}
@@ -44,7 +45,12 @@ public:
 	void addLight(LightPtr l);
 	void clearLights();
 
-	void setRender2D(uint width, uint height);
+private:
+	void _bindRenderState(RenderState& state);
+	void _bindLights(GLSLProgramPtr program, Matrix4f& modelView);
+	void _bindShaderViewingData(GLSLProgramPtr program, CameraPtr cam, Matrix4f& modelView, Matrix4f& model);
+	void bindVertexFormat(GLSLProgramPtr prog, VertexFormatPtr vf);
+	void _bindUVCoords(GLSLProgramPtr prog, TextureStackPtr texStack, VertexFormatPtr vf);
 };
 
 #endif /* RENDERABLESRASTERIZER_H_ */

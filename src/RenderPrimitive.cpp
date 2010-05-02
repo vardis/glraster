@@ -11,7 +11,7 @@
 template<typename T>
 RenderPrimitive<T>::RenderPrimitive() :
 	Renderable(), m_primitiveType(), m_numPrimitives(0), m_numVertices(0), m_numIndices(0), m_hasIndices(false),
-			m_vf(), m_isSpecified(false), m_hasBindedOnce(false) {
+			m_isSpecified(false), m_hasBindedOnce(false) {
 	glGenVertexArrays(1, &m_vao);
 }
 
@@ -23,8 +23,6 @@ RenderPrimitive<T>::~RenderPrimitive() {
 template<typename T>
 void RenderPrimitive<T>::specifyVertexFormat(VertexFormatPtr vf) {
 	m_hasBindedOnce = false;
-	//	m_vf.reset(new VertexFormat());
-	//	(*m_vf) = vf;
 	m_vf = vf;
 
 	// reset counters for each vertex element
@@ -72,12 +70,6 @@ bool RenderPrimitive<T>::endGeometry() {
 			return false;
 		}
 		++it;
-	}
-
-	// upload vertex attributes
-	for (uint8_t i = 0; i < m_vf->getNumElements(); i++) {
-		VertexAttribute* ve = m_vf->getAttributeByIndex(i);
-		ve->m_vbo->uploadData();
 	}
 
 	// update bounding box
@@ -156,13 +148,7 @@ template<typename T>
 void RenderPrimitive<T>::renderGeometry() {
 	assert(m_isSpecified);
 	if (m_isSpecified) {
-		glBindVertexArray(m_vao);
-		if (!m_hasBindedOnce) {
-			m_vf->bindData();
-			m_hasBindedOnce = true;
-		}
 		glDrawArrays(m_primitiveType.getGLDrawType(), 0, m_numVertices);
-		glBindVertexArray(0);
 	}
 }
 

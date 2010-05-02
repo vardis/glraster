@@ -58,7 +58,6 @@ public:
 
 	virtual void preRender();
 	virtual void renderGeometry();
-	void render(uint16_t x, uint16_t y, uint8_t* utf8Text, const Colour& colour = Colour::WHITE);
 };
 typedef shared_ptr<Text> TextPtr;
 
