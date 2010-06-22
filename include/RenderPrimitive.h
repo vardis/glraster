@@ -17,7 +17,7 @@ struct TrianglesPrimitiveType {
 		return GL_TRIANGLES;
 	}
 
-	uint8_t numVerticesForPrimitives(uint32_t numPrimitives) const {
+	uint32_t numVerticesForPrimitives(uint32_t numPrimitives) const {
 		return 3 * numPrimitives;
 	}
 
@@ -31,7 +31,7 @@ struct QuadsPrimitiveType {
 		return GL_QUADS;
 	}
 
-	uint8_t numVerticesForPrimitives(uint32_t numPrimitives) const {
+	uint32_t numVerticesForPrimitives(uint32_t numPrimitives) const {
 		return 4 * numPrimitives;
 	}
 	bool hasIndices() const {
@@ -45,7 +45,7 @@ struct QuadStripPrimitiveType {
 		return GL_QUAD_STRIP;
 	}
 
-	uint8_t numVerticesForPrimitives(uint32_t numPrimitives) const {
+	uint32_t numVerticesForPrimitives(uint32_t numPrimitives) const {
 		return 2 * numPrimitives + 2;
 	}
 	bool hasIndices() const {

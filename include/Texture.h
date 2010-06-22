@@ -100,9 +100,9 @@ class Texture {
 public:
 	String m_filename;
 	bool m_allocated;
-	uint32_t m_width;
-	uint32_t m_height;
-	uint32_t m_sourceWidth, m_sourceHeight;
+	uint16_t m_width;
+	uint16_t m_height;
+	uint16_t m_sourceWidth, m_sourceHeight;
 	GLuint m_texID;
 	GLenum m_textureTarget;
 

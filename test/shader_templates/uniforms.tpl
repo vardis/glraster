@@ -20,6 +20,7 @@ NUM_TEXTURES : number of active texture units
 }}
 
 row_major uniform mat4 u_Model;
+row_major uniform mat3 u_ModelInv;
 row_major uniform mat4 u_View;
 row_major uniform mat4 u_Proj;
 row_major uniform mat4 u_ModelView;
@@ -55,16 +56,20 @@ uniform int u_NumTextures;
 #define LT_Lamp 2
 #define LT_Spot 3
 
-// all vectors are specified in camera space and directional vectors are normalized
+// all vectors are specified in eye/camera space and directional vectors are normalized
 struct Light_t {
-	int type;
-	vec3 pos;	
-	vec3 dir;
+	int type;	// on of the LT_* constants
+	vec3 pos;	// position in eye space
+	vec3 world_pos;	// position in world space
+	vec3 dir;	// direction in eye space
+	vec3 world_dir; // direction in world space
+	vec3 half_vector; // half vector in eye space
+	vec3 world_half_vector; // half vector in world space
 	vec4 ambient;
-	vec4 diffuse;
-	vec4 specular;
+	vec4 diffuse;	
+	vec4 specular;	
 	float cosSpotCutOff;	// cosine of the spot cut-off angle
-	float constAttenuation;
+	float constAttenuation;	// constant attenuation factor
 	float linearAttenuation;
 	float quadraticAttenuation;
 };

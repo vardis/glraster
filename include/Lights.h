@@ -15,9 +15,9 @@ typedef struct Light {
 public:
 
 	Light() :
-		m_type(LightsTypeDirectional), m_position(0.0f), m_direction(Vec3f::Z_Neg_Axis), m_active(true), m_ambient(
+		m_type(LightsTypeDirectional), m_position(0.0f), m_direction(Vec3f::Z_Neg_Axis), m_ambient(
 				0.0f, 0.0f, 0.0f), m_diffuse(1.0f, 1.0f, 1.0f, 1.0f), m_specular(1.0f, 1.0f, 1.0f, 1.0f),
-				m_cosSpotCutOff(0.0f) {
+				m_cosSpotCutOff(0.0f), m_active(true) {
 
 	}
 

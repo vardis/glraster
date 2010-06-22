@@ -62,6 +62,7 @@ Mesh* bobMesh;
 MeshModel* bobModel;
 MeshModel* maleModel;
 Entity* bobEntity;
+Entity* billboardNMapEntity;
 Entity* billboardEntity;
 Entity* multiMat;
 Entity* planeEntity;
@@ -170,7 +171,7 @@ void initialize() {
 
 	g_camera = PinholeCameraPtr(new PinholeCamera());
 	g_camera->setPos(Vec3f(0, 0, 5));
-	g_camera->setLook(Vec3f::Zero);
+	g_camera->setLook(Vec3f(0,0,1));
 	g_camera->setNear(0.1f);
 	g_camera->setFar(1000.0f);
 	g_camera->setFov(60.0f);
@@ -203,14 +204,14 @@ void initialize() {
 	frontLight->m_diffuse = Colour::WHITE;
 	frontLight->m_specular = Colour::WHITE;
 
-	backLight = LightPtr(new Light());
-	backLight->m_type = Light::LightsTypeDirectional;
-	backLight->m_direction = Vec3f::Z_Axis;
-	backLight->m_diffuse = Colour::WHITE;
-	backLight->m_specular = Colour::WHITE;
+//	backLight = LightPtr(new Light());
+//	backLight->m_type = Light::LightsTypeDirectional;
+//	backLight->m_direction = Vec3f::Z_Axis;
+//	backLight->m_diffuse = Colour(1.0f, 0.0f, 0.0f); //Colour::WHITE;
+//	backLight->m_specular = Colour::WHITE;
 
 	g_rasterizer->addLight(frontLight);
-	g_rasterizer->addLight(backLight);
+//	g_rasterizer->addLight(backLight);
 
 	loadModels();
 
@@ -261,57 +262,61 @@ void loadModels() {
 
 	///////////////////////////////////////////////////////////////////////
 	// create male figure mesh
-	std::list<Mesh*> maleMeshes = mf.createFromFile("muscular_male_basemesh.obj");
-	maleEntity = new Entity();
-	it = maleMeshes.begin();
-	while (it != maleMeshes.end()) {
-		MeshModel* maleModel = new MeshModel(*it);
-		maleModel->getMaterial()->m_texStack->textures[0]->setMinFilter(TexFilter_Bilinear_Mipmap_Bilinear);
-		maleModel->getMaterial()->m_texStack->textures[0]->setAnisotropy(8);
-		maleEntity->addRenderable(maleModel);
-		++it;
-	}
-	Matrix4f& m1 = maleEntity->getTransform();
-	m1 = Matrix4f::Translation(0.0f, 0.0f, -3.0f) * Matrix4f::Scale(0.4f, 0.4f, 0.4f) * m1;
-
+	/*
+	 std::list<Mesh*> maleMeshes = mf.createFromFile("muscular_male_basemesh.obj");
+	 maleEntity = new Entity();
+	 it = maleMeshes.begin();
+	 while (it != maleMeshes.end()) {
+	 MeshModel* maleModel = new MeshModel(*it);
+	 maleModel->getMaterial()->m_texStack->textures[0]->setMinFilter(TexFilter_Bilinear_Mipmap_Bilinear);
+	 maleModel->getMaterial()->m_texStack->textures[0]->setAnisotropy(8);
+	 maleEntity->addRenderable(maleModel);
+	 ++it;
+	 }
+	 Matrix4f& m1 = maleEntity->getTransform();
+	 m1 = Matrix4f::Translation(0.0f, 0.0f, -3.0f) * Matrix4f::Scale(0.4f, 0.4f, 0.4f) * m1;
+	 */
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
 	// create teapot mesh
-	{
-		//		Texture* tex = new Texture();
-		//		tex->m_useMipmaps = false;
-		//		g_texMgr->loadTexture("gloss.png", tex);
+	/*
+	 {
+	 std::cout << "CREATING TEAPOT->>>>>>>>.\n";
+	 Texture* tex = new Texture();
+	 tex->m_useMipmaps = false;
+	 g_texMgr->loadTexture("rockwall_NH.tga", tex);
 
-		std::list<Mesh*> teapotMeshes = mf.createFromFile("teapot.obj", true, true);
-		teapotEntity = new Entity();
-		it = teapotMeshes.begin();
-		while (it != teapotMeshes.end()) {
-			MeshModel* teapotModel = new MeshModel(*it);
-			teapotModel->getRenderState().setCulling(false);
+	 std::list<Mesh*> teapotMeshes = mf.createFromFile("teapot-tbn.obj", true, true);
+	 teapotEntity = new Entity();
+	 it = teapotMeshes.begin();
+	 while (it != teapotMeshes.end()) {
+	 MeshModel* teapotModel = new MeshModel(*it);
+	 teapotModel->getRenderState().setCulling(false);
 
-			//			MaterialPtr mat = teapotModel->getMaterial();
-			//			mat->m_texStack->textures[0].reset(tex);
-			//			mat->m_texStack->texOutputs[0].mapTo = TexMapTo_CSpecular;
+	 MaterialPtr mat = teapotModel->getMaterial();
+	 mat->m_texStack->textures[0].reset(tex);
+	 mat->m_texStack->texOutputs[0].mapTo = TexMapTo_Normal;
 
-			teapotEntity->addRenderable(teapotModel);
-			++it;
-		}
+	 teapotEntity->addRenderable(teapotModel);
+	 ++it;
+	 }
 
-		Matrix4f& m1 = teapotEntity->getTransform();
-		m1 = Matrix4f::Translation(4.0f, 0.4f, -2.0f) * m1;
-	}
+	 Matrix4f& m1 = teapotEntity->getTransform();
+	 m1 = Matrix4f::Translation(4.0f, 0.4f, -2.0f) * m1;
+	 }
+	 */
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
-	// create billboard of vegetation
+	// create billboard
 	MaterialPtr billboardMat(new Material());
 	{
 		billboardMat->m_name = "billboardMat";
 		billboardMat->m_twoSided = true;
 		billboardMat->m_diffuse.set(1.0f);
 		billboardMat->m_specular.set(0.0f);
-		billboardMat->m_shadeless = true;
+		//		billboardMat->m_shadeless = true;
 		//	billboardMat->setCustomShaders(true);
 		//	billboardMat->setFragmentShader("fs.glsl");
 		billboardMat->m_texStack = TextureStackPtr(new TextureStack());
@@ -320,32 +325,73 @@ void loadModels() {
 		tex->m_useMipmaps = true;
 		tex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
 		tex->m_magFilter = TexFilter_Bilinear;
-		g_texMgr->loadTexture(/*"fgrass1_v2_256.png" */"waves2.dds", tex);
+		g_texMgr->loadTexture(/*"fgrass1_v2_256.png" */"rockwall.tga", tex);
+		billboardMat->m_texStack->textures[0].reset(tex);
+		billboardMat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
 
+		Texture* normalTex = new Texture();
+		normalTex->m_useMipmaps = false;
+		g_texMgr->loadTexture("rockwall_NH.bmp", normalTex);
+		normalTex->configureGLState();
+		billboardMat->m_texStack->textures[1].reset(normalTex);
+		normalTex->m_minFilter = TexFilter_Bilinear;
+		normalTex->m_magFilter = TexFilter_Bilinear;
+		normalTex->setWrapping(TexWrapMode_Repeat);
+		billboardMat->m_texStack->texOutputs[1].mapTo = TexMapTo_Normal;
+
+		Billboard* bb = new Billboard(Billboard_Spherical, 1.0f, 1.0f);
+		bb->setMaterial(billboardMat);
+		bb->getRenderState().setCulling(false);
+
+		billboardNMapEntity = new Entity();
+		billboardNMapEntity->addRenderable(bb);
+
+		Matrix4f& m1 = billboardNMapEntity->getTransform();
+		m1 = Matrix4f::Translation(-4.0f, 0.0f, 0.0f) * m1;
+	}
+
+	// create billboard
+	{
+		MaterialPtr billboardMat(new Material());
+		billboardMat->m_name = "billboardMat";
+		billboardMat->m_twoSided = true;
+		billboardMat->m_diffuse.set(1.0f);
+		billboardMat->m_specular.set(0.0f);
+		//		billboardMat->m_shadeless = true;
+		billboardMat->m_texStack = TextureStackPtr(new TextureStack());
+
+		Texture* tex = new Texture();
+		tex->m_useMipmaps = true;
+		tex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
+		tex->m_magFilter = TexFilter_Bilinear;
+		g_texMgr->loadTexture("rockwall.tga", tex);
 		billboardMat->m_texStack->textures[0].reset(tex);
 		billboardMat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
 
 		Billboard* bb = new Billboard(Billboard_Spherical, 1.0f, 1.0f);
 		bb->setMaterial(billboardMat);
 		bb->getRenderState().setCulling(false);
+
 		billboardEntity = new Entity();
 		billboardEntity->addRenderable(bb);
 
 		Matrix4f& m1 = billboardEntity->getTransform();
-		m1 = Matrix4f::Translation(-4.0f, 0.0f, 0.0f) * m1;
+		m1 = Matrix4f::Translation(2.0f, 0.0f, 0.0f) * m1;
 	}
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
 	// QuadStrip
-	VertexFormat vf;
-	vf.addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
-	vf.addAttribute(Vertex_Normal, VertexFormat_FLOAT3);
-	vf.addAttribute(Vertex_TexCoord0, VertexFormat_FLOAT2);
+	VertexFormat* vf = new VertexFormat();
+	vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+	vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3);
+	vf->addAttribute(Vertex_Tangent, VertexFormat_FLOAT3);
+	vf->addAttribute(Vertex_BiNormal, VertexFormat_FLOAT3);
+	vf->addAttribute(Vertex_TexCoord0, VertexFormat_FLOAT2);
 
 	RenderPrimitive<QuadStripPrimitiveType>* qs = new RenderPrimitive<QuadStripPrimitiveType> ();
 	qs->setMaterial(billboardMat);
-	qs->specifyVertexFormat(VertexFormatPtr(VertexFormat::create(VF_V3_N3_T2)));
+	qs->specifyVertexFormat(VertexFormatPtr(vf));
 	qs->beginGeometry(3);
 
 	float quads_pos[] = { -1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
@@ -355,6 +401,14 @@ void loadModels() {
 	float quads_normals[] = { 0.0f, 0.0f, 1.0f };
 	for (int v = 0; v < 8; v++)
 		qs->vertexAttrib(Vertex_Normal, quads_normals);
+
+	float quads_tangents[] = { 1.0f, 0.0f, 0.0f };
+	for (int v = 0; v < 8; v++)
+		qs->vertexAttrib(Vertex_Tangent, quads_tangents);
+
+	float quads_binormals[] = { 0.0f, 1.0f, 0.0f };
+	for (int v = 0; v < 8; v++)
+		qs->vertexAttrib(Vertex_BiNormal, quads_binormals);
 
 	float quads_uvs[] = { 0.0f, 1.0f, 0.0f, 0.0f, 0.33f, 1.0f, 0.33f, 0.0f, 0.66f, 1.0f, 0.66f, 0.0f, 1.0f, 1.0f, 1.0f,
 							0.0f };
@@ -376,7 +430,7 @@ void loadModels() {
 	g_text.reset(new Text(g_font));
 	//	g_text->setPos(100 - g_viewport->m_width/2, 100 - g_viewport->m_height/2);
 	Matrix4f& mtxt = g_text->getTransform();
-	mtxt = Matrix4f::Translation(10 - g_viewport->m_width / 2, 10 - g_viewport->m_height / 2, 0.0f) * mtxt;
+	mtxt = Matrix4f::Translation(10.0f - g_viewport->m_width / 2.0f, 10.0f - g_viewport->m_height / 2.0f, 0.0f) * mtxt;
 	g_text->setText("hello");
 
 	///////////////////////////////////////////////////////////////////////
@@ -469,30 +523,36 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 	//	}
 
 	// render male figure
-	for (uint32_t i = 0; i < maleEntity->getNumRenderables(); i++) {
-		Renderable* r = maleEntity->getRenderable(i);
-		r->setTransform(maleEntity->getTransform());
-		g_rasterizer->getRenderLayer(0).addRenderable(r);
-	}
+	//	for (uint32_t i = 0; i < maleEntity->getNumRenderables(); i++) {
+	//		Renderable* r = maleEntity->getRenderable(i);
+	//		r->setTransform(maleEntity->getTransform());
+	//		g_rasterizer->getRenderLayer(0).addRenderable(r);
+	//	}
 
 	// render teapot
-	for (uint32_t i = 0; i < teapotEntity->getNumRenderables(); i++) {
-		Renderable* r = teapotEntity->getRenderable(i);
-		r->setTransform(teapotEntity->getTransform());
-		g_rasterizer->getRenderLayer(0).addRenderable(r);
-	}
+	/*
+	 for (uint32_t i = 0; i < teapotEntity->getNumRenderables(); i++) {
+	 Renderable* r = teapotEntity->getRenderable(i);
+	 r->setTransform(teapotEntity->getTransform());
+	 g_rasterizer->getRenderLayer(0).addRenderable(r);
+	 }*/
 
 	// render billboard
-	Renderable* bb = billboardEntity->getRenderable(0);
-	bb->setTransform(billboardEntity->getTransform());
-	g_rasterizer->getRenderLayer(0).addRenderable(bb);
+		Renderable* bb = billboardEntity->getRenderable(0);
+		bb->setTransform(billboardEntity->getTransform());
+		g_rasterizer->getRenderLayer(0).addRenderable(bb);
 
+	// render normal mapped billboard
+//		Renderable* bbNMap = billboardNMapEntity->getRenderable(0);
+//		bbNMap->setTransform(billboardNMapEntity->getTransform());
+//		g_rasterizer->getRenderLayer(0).addRenderable(bbNMap);
+
+
+	// render quad strip
+	Renderable* qs = quadStripEnt->getRenderable(0);
+	qs->setTransform(quadStripEnt->getTransform());
+	g_rasterizer->getRenderLayer(0).addRenderable(qs);
 	/*
-	 // render quad strip
-	 Renderable* qs = quadStripEnt->getRenderable(0);
-	 qs->setTransform(quadStripEnt->getTransform());
-	 g_rasterizer->getRenderLayer(0).addRenderable(qs);
-
 	 // render multi-material cube
 	 for (uint32_t i = 0; i < multiMat->getNumRenderables(); i++) {
 	 Renderable* r = multiMat->getRenderable(i);

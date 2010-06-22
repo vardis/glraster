@@ -17,12 +17,12 @@
 class Text : public Renderable {
 
 private:
-	TTFontPtr  m_font;
-	Vec2<uint> m_pos;
-	Colour     m_colour;
-	String     m_text;
+	TTFontPtr   m_font;
+	Vec2<float> m_pos;
+	Colour      m_colour;
+	String      m_text;
 	RenderPrimitive<TrianglesPrimitiveType> m_geom;
-	bool       m_updateGeom;
+	bool        m_updateGeom;
 
 public:
 	explicit Text(TTFontPtr font);
@@ -43,7 +43,7 @@ public:
 		m_pos.x = x;
 		m_pos.y = y;
 	}
-	const Vec2<uint>& getPos() const {
+	const Vec2<float>& getPos() const {
 		return m_pos;
 	}
 

@@ -50,6 +50,7 @@ private:
 	void _copyVertexPosToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
 	void _copyVertexNormalsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
 	void _copyVertexTangentsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
+	void _copyVertexBiNormalsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
 	void _copyVertexUVsToVertexAttributeArray(aiMesh* mesh, uint8_t uvSet, VertexAttribute* ve);
 	void _copyVertexColorsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve);
 	Mesh* _readSingleMesh(aiMesh* importedMesh, std::vector<Material*> materials);

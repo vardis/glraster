@@ -10,6 +10,13 @@
 
 #include <ctemplate/template.h>
 
+const char* const ShaderGenerator::TEX_COORDS = "TEX_COORDS";
+const char* const ShaderGenerator::TEX_INDEX = "TEX_INDEX";
+const char* const ShaderGenerator::UV_SET_INDEX = "UV_SET_INDEX";
+const char* const ShaderGenerator::S_COORD = "s";
+const char* const ShaderGenerator::ST_COORDS = "st";
+const char* const ShaderGenerator::TANGENT_SPACE_NMAP_TPL = "shader_templates/tangent_space_nmap.tpl";
+
 ShaderGenerator::ShaderGenerator() {
 	// TODO Auto-generated constructor stub
 
@@ -20,6 +27,8 @@ ShaderGenerator::~ShaderGenerator() {
 }
 
 void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, const VertexFormat& vf) {
+
+	bool hasNormalMap = false;
 
 	ctemplate::TemplateDictionary vertexShaderDict("vertexShader");
 	ctemplate::TemplateDictionary fragmentShaderDict("fragmentShader");
@@ -35,7 +44,8 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 	uniformsDict->SetFilename("shader_templates/uniforms.tpl");
 
 	// use lighting when material uses shading and we have normals
-	if (!mat.m_shadeless && vf.getAttributeBySemantic(Vertex_Normal)) {
+	bool useLighting = !mat.m_shadeless && vf.getAttributeBySemantic(Vertex_Normal);
+	if (useLighting) {
 		uniformsDict->ShowSection("USE_LIGHTING");
 	}
 
@@ -49,6 +59,16 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 		fragmentOutDict->ShowSection("HAS_NORMALS");
 
 		uniformsDict->ShowSection("HAS_NORMALS");
+	}
+
+	if (vf.getAttributeBySemantic(Vertex_Tangent)) {
+		fragmentOutDict->ShowSection("HAS_TANGENTS");
+		vertexIoDict->ShowSection("HAS_TANGENTS");
+	}
+
+	if (vf.getAttributeBySemantic(Vertex_BiNormal)) {
+		fragmentOutDict->ShowSection("HAS_BINORMALS");
+		vertexIoDict->ShowSection("HAS_BINORMALS");
 	}
 
 	if (vf.getAttributeBySemantic(Vertex_Color)) {
@@ -80,8 +100,11 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 					"SINGLE_TEXTURE_STACK_ENTRY");
 			texUnitDict->SetFilename("shader_templates/ft_tex_stack_application.tpl");
 
+			ctemplate::TemplateDictionary* alphaMapDict = 0;
+			ctemplate::TemplateDictionary* tangentNormalMapDict = 0;
+
 			// depending on the texture's mapTo, we will emit different sections in the template
-			ctemplate::TemplateDictionary* texMapToDict;
+			ctemplate::TemplateDictionary* texMapToDict = 0;
 			switch (mat.m_texStack->texOutputs[i].mapTo) {
 			case TexMapTo_Diffuse:
 				texMapToDict = texUnitDict->AddSectionDictionary("TEX_MAP_TO_DIFFUSE");
@@ -92,12 +115,30 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 			case TexMapTo_Shininess:
 				texMapToDict = texUnitDict->AddSectionDictionary("TEX_MAP_TO_SHININESS");
 				break;
+			case TexMapTo_Alpha:
+				alphaMapDict = fragmentShaderDict.AddSectionDictionary("ALPHA_MAP_APPLICATION");
+				break;
+			case TexMapTo_Normal:
+				tangentNormalMapDict = fragmentShaderDict.AddIncludeDictionary("TANGENT_SPACE_NORMAL_MAP");
+				tangentNormalMapDict->SetFilename(TANGENT_SPACE_NMAP_TPL);
+				hasNormalMap = true;
+				break;
 			default:
 				SAFE_THROW(GLException(E_NOTIMPL, "Unimplemented texture output mapping mode"))
 			}
 
-			texUnitDict->SetIntValue("TEX_INDEX", activeTextures);
-			texUnitDict->SetIntValue("UV_SET_INDEX", mat.m_texStack->texInputs[i].uvSet);
+			texUnitDict->SetIntValue(TEX_INDEX, activeTextures);
+			texUnitDict->SetIntValue(UV_SET_INDEX, mat.m_texStack->texInputs[i].uvSet);
+
+			if (alphaMapDict) {
+				alphaMapDict->SetIntValue(TEX_INDEX, activeTextures);
+				alphaMapDict->SetIntValue(UV_SET_INDEX, mat.m_texStack->texInputs[i].uvSet);
+			}
+
+			if (tangentNormalMapDict) {
+				tangentNormalMapDict->SetIntValue(TEX_INDEX, activeTextures);
+				tangentNormalMapDict->SetIntValue(UV_SET_INDEX, mat.m_texStack->texInputs[i].uvSet);
+			}
 
 			switch (mat.m_texStack->texOutputs[i].blendOp) {
 			case TexBlendOp_Mix:
@@ -118,17 +159,33 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 
 			// this is the dictionary for a single uniform sampler declaration
 			ctemplate::TemplateDictionary* samplerDict = uniformsDict->AddSectionDictionary("SINGLE_SAMPLER_DECL");
-			samplerDict->SetIntValue("TEX_INDEX", activeTextures);
+			samplerDict->SetIntValue(TEX_INDEX, activeTextures);
 
 			switch (tex->getTextureTarget()) {
 			case GL_TEXTURE_1D:
 				samplerDict->SetValue("SAMPLER_SPEC", "sampler1D");
-				texUnitDict->SetValue("TEX_COORDS", "s");
+				texUnitDict->SetValue(TEX_COORDS, S_COORD);
+
+				if (alphaMapDict) {
+					alphaMapDict->SetValue(TEX_COORDS, S_COORD);
+				}
+
+				if (tangentNormalMapDict) {
+					tangentNormalMapDict->SetValue(TEX_COORDS, S_COORD);
+				}
+
 				break;
 			case GL_TEXTURE_2D:
 			default:
 				samplerDict->SetValue("SAMPLER_SPEC", "sampler2D");
-				texUnitDict->SetValue("TEX_COORDS", "st");
+				texUnitDict->SetValue(TEX_COORDS, ST_COORDS);
+
+				if (alphaMapDict) {
+					alphaMapDict->SetValue(TEX_COORDS, ST_COORDS);
+				}
+				if (tangentNormalMapDict) {
+					tangentNormalMapDict->SetValue(TEX_COORDS, ST_COORDS);
+				}
 				break;
 			}
 
@@ -137,7 +194,7 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 			// tex gen systems. Then for each texture unit that uses custom tex gen, we need to
 			// instantiate a SINGLE_TEX_COORDS_GEN section with an appropriately initialized dictionary
 			ctemplate::TemplateDictionary* singleTexGen = texGenDict->AddSectionDictionary("SINGLE_TEXCOORDS_ASSIGN");
-			singleTexGen->SetIntValue("UV_SET_INDEX", mat.m_texStack->texInputs[i].uvSet);
+			singleTexGen->SetIntValue(UV_SET_INDEX, mat.m_texStack->texInputs[i].uvSet);
 
 			TexMapInput inputMapping = mat.m_texStack->texInputs[i].mapping;
 			if (inputMapping != TexMapInput_UV) {
@@ -175,6 +232,12 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 	}
 	uniformsDict->SetIntValue("NUM_TEXTURES", activeTextures);
 
+	if (hasNormalMap) {
+		vertexShaderDict.ShowSection("NORMAL_MAPPING");
+		fragmentOutDict->ShowSection("NORMAL_MAPPING");
+		fragmentOutDict->ShowSection("NORMAL_MAPPING");
+	}
+
 	// TODO: calculate this per material
 	size_t numUvSets = 1;
 	if (activeTextures > 0) {
@@ -185,7 +248,7 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 
 	for (uint uv = 0; uv < numUvSets; uv++) {
 		ctemplate::TemplateDictionary* uvsetDict = vertexShaderDict.AddSectionDictionary("SINGLE_UVSET_ASSIGN");
-		uvsetDict->SetIntValue("UV_SET_INDEX", uv);
+		uvsetDict->SetIntValue(UV_SET_INDEX, uv);
 	}
 
 	ctemplate::Template* vertexShaderTpl = ctemplate::Template::GetTemplate("shader_templates/ft_shader.tpl",
@@ -226,9 +289,22 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 	fragIoTpl->Expand(&fragIoStr, fragmentOutDict);
 	fragmentShaderDict.SetValue("FRAGMENT_INPUTS", fragIoStr);
 
-	if (!mat.m_shadeless && vf.getAttributeBySemantic(Vertex_Normal)) {
+	if (useLighting) {
+
+		fragmentShaderDict.ShowSection("USE_LIGHTING");
+
 		// for now, enable Blinn-Phong shading mode only
-		fragmentShaderDict.ShowSection("PHONG_LIGHTING");
+		ctemplate::TemplateDictionary* fragLightingDict = fragmentShaderDict.AddIncludeDictionary("PHONG_LIGHTING");
+		fragLightingDict->SetFilename("shader_templates/ft_fs_lighting.tpl");
+
+		if (!hasNormalMap) {
+			fragmentShaderDict.ShowSection("GEOMETRIC_NORMAL");
+			fragLightingDict->ShowSection("VIEW_SPACE_LIGHTING");
+		} else {
+			fragLightingDict->ShowSection("NORMAL_MAPPING");
+			fragmentInDict->ShowSection("NORMAL_MAPPING");
+		}
+
 		ctemplate::TemplateDictionary* lightingDict = fragmentShaderDict.AddIncludeDictionary("LIGHTING");
 		lightingDict->SetFilename("shader_templates/ft_lighting.tpl");
 		lightingDict->ShowSection("WITH_LIGHT_ATTENUATION");

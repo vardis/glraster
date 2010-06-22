@@ -43,8 +43,8 @@ typedef std::string String;
 typedef boost::shared_ptr<uint32_t> IndexPtr;
 typedef boost::shared_array<uint32_t> IndexArrayPtr;
 
-#define rads_to_deg(x) x * (180.0 / M_PI)
-#define deg_to_rads(x) x * (M_PI / 180.0)
+#define rads_to_deg(x) x * (180.0f / (float)M_PI)
+#define deg_to_rads(x) x * ((float)M_PI / 180.0f)
 #define clamp(x, l, h) x < l ? l : (x > h ? h : x);
 #define wrap(x, l, h) (x < l) ? x + h : ( (x > h) ? x - h : x );
 

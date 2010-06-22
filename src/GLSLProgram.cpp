@@ -182,6 +182,11 @@ void GLSLProgram::setUniform(int uniformLoc, Matrix4f& mat) {
 	glUniformMatrix4fv(uniformLoc, 1, false, mat.ptr());
 }
 
+void GLSLProgram::setUniform(int uniformLoc, Matrix3f& mat) {
+	assert(m_linked);
+	glUniformMatrix3fv(uniformLoc, 1, false, mat.ptr());
+}
+
 void GLSLProgram::setUniform(int uniformLoc, Vec3f& vec) {
 	assert(m_linked);
 	glUniform3fv(uniformLoc, 1, vec.ptr());
@@ -199,5 +204,6 @@ template void GLSLProgram::setUniform(const char* uniformName, float& value);
 template void GLSLProgram::setUniform(const char* uniformName, int& value);
 template void GLSLProgram::setUniform(const char* uniformName, unsigned int& value);
 template void GLSLProgram::setUniform(const char* uniformName, Matrix4f& value);
+template void GLSLProgram::setUniform(const char* uniformName, Matrix3f& value);
 template void GLSLProgram::setUniform(const char* uniformName, Vec3f& value);
 

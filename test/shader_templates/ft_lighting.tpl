@@ -11,13 +11,13 @@
  * @param diffuse the accumulated diffuse radiance
  * @param specular the accumulated specular radiance
  */
-void Directional_radiance(in int lightIdx, in vec3 normal, in vec3 shadePoint, inout vec4 ambient, inout vec4 diffuse, inout vec4 specular) 
+void Directional_radiance(in int lightIdx, in vec3 normal, in vec3 shadePoint, in vec3 lightDir, inout vec4 ambient, inout vec4 diffuse, inout vec4 specular) 
 {
-	float fd = max(0.0, dot(normal, -u_Lights[lightIdx].dir));
+	float fd = max(0.0, dot(normal, -lightDir));
 	if (fd > 0.0) 
 	{
 		// light's half vector
-		vec3 hv = normalize(-shadePoint - u_Lights[lightIdx].dir);
+		vec3 hv = normalize(-shadePoint - lightDir);
 		float fs = max(0.0, dot(normal, hv));
 		diffuse += fd*u_Lights[lightIdx].diffuse;
 		if (fs > 0.0)

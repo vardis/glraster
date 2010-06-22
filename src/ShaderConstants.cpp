@@ -10,6 +10,8 @@
 
 const char* const ShaderConstants::VATTR_Pos = "vs_VertexPos";
 const char* const ShaderConstants::VATTR_Normal = "vs_Normal";
+const char* const ShaderConstants::VATTR_Tangent = "vs_Tangent";
+const char* const ShaderConstants::VATTR_BiNormal = "vs_Binormal";
 const char* const ShaderConstants::VATTR_Color = "vs_Color";
 const char* const ShaderConstants::VATTR_TexCoords[8] = { "vs_TexCoords[0]", "vs_TexCoords[1]", "vs_TexCoords[2]",
 															"vs_TexCoords[3]", "vs_TexCoords[4]", "vs_TexCoords[5]",
@@ -20,7 +22,9 @@ const char* const ShaderConstants::Fragment_Color = "fs_FragColor";
 const char* const ShaderConstants::UNIFORM_ModelViewProj = "u_ModelViewProjection";
 const char* const ShaderConstants::UNIFORM_ModelView = "u_ModelView";
 const char* const ShaderConstants::UNIFORM_Model = "u_Model";
+const char* const ShaderConstants::UNIFORM_ModelInverse = "u_ModelInv";
 const char* const ShaderConstants::UNIFORM_View = "u_View";
+const char* const ShaderConstants::UNIFORM_ViewInverse = "u_ViewInv";
 const char* const ShaderConstants::UNIFORM_Proj = "u_Proj";
 
 const char* const ShaderConstants::UNIFORM_NormalMatrix = "u_NormalMatrix";
@@ -77,6 +81,25 @@ const char* const ShaderConstants::UNIFORM_LightsDirection[MAX_LIGHTS] = { 	"u_L
 																		"u_Lights[5].dir",
 																		"u_Lights[6].dir",
 																		"u_Lights[7].dir" };
+
+const char* const ShaderConstants::UNIFORM_LightsWorldPos[MAX_LIGHTS] = { 	"u_Lights[0].world_pos",
+																		"u_Lights[1].world_pos",
+																		"u_Lights[2].world_pos",
+																		"u_Lights[3].world_pos",
+																		"u_Lights[4].world_pos",
+																		"u_Lights[5].world_pos",
+																		"u_Lights[6].world_pos",
+																		"u_Lights[7].world_pos" };
+
+const char* const ShaderConstants::UNIFORM_LightsWorldDirection[MAX_LIGHTS] = { 	"u_Lights[0].world_dir",
+																		"u_Lights[1].world_dir",
+																		"u_Lights[2].world_dir",
+																		"u_Lights[3].world_dir",
+																		"u_Lights[4].world_dir",
+																		"u_Lights[5].world_dir",
+																		"u_Lights[6].world_dir",
+																		"u_Lights[7].world_dir" };
+
 
 const char* const ShaderConstants::UNIFORM_LightsAmbient[MAX_LIGHTS] = { 	"u_Lights[0].ambient",
 																		"u_Lights[1].ambient",

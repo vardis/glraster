@@ -22,16 +22,26 @@ vec2 vs_TexCoords[NUM_UV_SETS] : array of texture coordinates
 void main() {
 	vec4 hPos = vec4(vs_VertexPos, 1.0);
 	gl_Position = u_ModelViewProjection * hPos;
-	fs_eyePos = vec3(u_ModelView * hPos);
+	fs_FragCoordsView = vec3(u_ModelView * hPos);
 
 {{#HAS_NORMALS}}
-	fs_Normal = /*u_NormalMatrix * */vs_Normal;
+	fs_Normal = u_NormalMatrix * vs_Normal;
 
 {{#NORMALIZE_NORMALS}} 
 	fs_Normal = normalize(fs_Normal);
 {{/NORMALIZE_NORMALS}}
 
 {{/HAS_NORMALS}}
+
+{{#NORMAL_MAPPING}}
+fs_FragCoordsObj = vs_VertexPos;
+vec3 t = u_NormalMatrix * vs_Tangent;
+vec3 b = cross(t, fs_Normal);
+fs_TangentBasis = mat3(t, b, fs_Normal);
+tbn_vertexPos = vs_VertexPos * fs_TangentBasis;
+//fs_TangentBasis = u_NormalMatrix * mat3(vs_Tangent, vs_Binormal, vs_Normal);
+//tbn_vertexPos = vs_VertexPos * fs_TangentBasis;
+{{/NORMAL_MAPPING}}
 
 {{#HAS_COLORS}}
 	fs_Color = vs_Color;

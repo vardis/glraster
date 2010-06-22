@@ -14,8 +14,8 @@ vec4 fs_Color: vertex color
 vec2 fs_TexCoords[] : uv coords for UV sets
 }}
 
-// position of the shading point in eye/camera space
-out vec3 fs_eyePos;
+// position of the shading point in camera space
+{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec3 fs_FragCoordsView;
 
 {{#HAS_NORMALS}}
 {{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec3 fs_Normal;
@@ -28,3 +28,20 @@ out vec3 fs_eyePos;
 {{#HAS_TEXTURES}}
 {{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec2 fs_TexCoords[{{NUM_UV_SETS}}];
 {{/HAS_TEXTURES}}
+
+{{#NORMAL_MAPPING}}
+
+// fragment coordinates in object space 
+{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec3 fs_FragCoordsObj;
+
+// TBN matrix 
+{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} mat3 fs_TangentBasis;
+
+// vertex coordinates in tangent space
+// the tangent, binormal and normal occupy the 0,1 and 2 rows , respectively
+// therefore this matrix should transform vectors by multiplying from the right side
+{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec3 tbn_vertexPos;
+
+
+{{/NORMAL_MAPPING}}
+

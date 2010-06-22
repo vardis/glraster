@@ -179,7 +179,7 @@ void RenderablesRasterizer::_bindRenderState(RenderState& rs) {
 	}
 }
 
-void RenderablesRasterizer::_bindLights(GLSLProgramPtr program, Matrix4f& modelView) {
+void RenderablesRasterizer::_bindLights(GLSLProgramPtr program, Matrix4f& view) {
 
 	size_t numLights = m_activeLights.size();
 	program->setUniform(ShaderConstants::UNIFORM_NumLights, numLights);
@@ -189,11 +189,13 @@ void RenderablesRasterizer::_bindLights(GLSLProgramPtr program, Matrix4f& modelV
 			continue;
 
 		program->setUniform(ShaderConstants::UNIFORM_LightsType[i], l->m_type);
+		program->setUniform(ShaderConstants::UNIFORM_LightsWorldPos[i], l->m_position);
+		program->setUniform(ShaderConstants::UNIFORM_LightsWorldDirection[i], l->m_direction);
 
-		Vec3f lp = modelView * l->m_position;
+		Vec3f lp = view * l->m_position;
 		program->setUniform(ShaderConstants::UNIFORM_LightsPos[i], lp);
 
-		Vec3f ld = modelView * l->m_direction;
+		Vec3f ld = view.upperLeft().inversed().transposed() * l->m_direction;
 		ld.normalize();
 		program->setUniform(ShaderConstants::UNIFORM_LightsDirection[i], ld);
 
@@ -210,16 +212,19 @@ void RenderablesRasterizer::_bindLights(GLSLProgramPtr program, Matrix4f& modelV
 void RenderablesRasterizer::_bindShaderViewingData(GLSLProgramPtr program, CameraPtr cam, Matrix4f& modelView,
 		Matrix4f& model) {
 
+	Matrix3f modelInv(model.upperLeft().inversed().transposed());
 	program->setUniform(ShaderConstants::UNIFORM_Model, model);
+	program->setUniform(ShaderConstants::UNIFORM_ModelInverse, modelInv);
+
 	program->setUniform(ShaderConstants::UNIFORM_ModelView, modelView);
-	//
-	//		float* p = modelView.ptr();
-	//			std::cout << "modelView matrix { ";
-	//			for (int i = 0; i < 16; i++, p++) {
-	//				if (i % 4 == 0) std::cout << "\n";
-	//				std::cout << *p << " , ";
-	//			}
-	//			std::cout << "}\n";
+
+//			float* p = modelView.inversed().transposed().ptr();
+//				std::cout << "modelView matrix { ";
+//				for (int i = 0; i < 16; i++, p++) {
+//					if (i % 4 == 0) std::cout << "\n";
+//					std::cout << *p << " , ";
+//				}
+//				std::cout << "}\n";
 	program->setUniform(ShaderConstants::UNIFORM_View, cam->getView());
 	program->setUniform(ShaderConstants::UNIFORM_Proj, cam->getProj());
 
@@ -235,32 +240,22 @@ void RenderablesRasterizer::_bindShaderViewingData(GLSLProgramPtr program, Camer
 	program->setUniform(ShaderConstants::UNIFORM_ModelViewProj, modelViewProj);
 
 	//TODO: check if I need to use the inverse transpose here or i can trust this matrix is orthonormal
-	Matrix4f normalMat = modelView.inversed().transposed();
+	Matrix3f normalMat = modelView.upperLeft().inversed().transposed();
 	program->setUniform(ShaderConstants::UNIFORM_NormalMatrix, normalMat);
 }
 
 // This should go to the Renderable interface
 void RenderablesRasterizer::bindVertexFormat(GLSLProgramPtr prog, VertexFormatPtr vf) {
 
-	VertexAttribute* posAttrib = vf->getAttributeBySemantic(Vertex_Pos);
-	if (posAttrib) {
-		GLuint i = prog->getAttributeIndex(ShaderConstants::VATTR_Pos);
-		posAttrib->m_vbo->bindAttributeData(i);
-	}
-
-	VertexAttribute* normalAttrib = vf->getAttributeBySemantic(Vertex_Normal);
-	if (normalAttrib) {
-		GLint i = prog->getAttributeIndex(ShaderConstants::VATTR_Normal);
-		if (i != -1) {
-			normalAttrib->m_vbo->bindAttributeData(i);
-		}
-	}
-
-	VertexAttribute* colorAttrib = vf->getAttributeBySemantic(Vertex_Color);
-	if (colorAttrib) {
-		GLint i = prog->getAttributeIndex(ShaderConstants::VATTR_Color);
-		if (i != -1) {
-			colorAttrib->m_vbo->bindAttributeData(i);
+	enum VertexAttributeSemantic vaSem[] = { Vertex_Pos, Vertex_Normal, Vertex_BiNormal, Vertex_Tangent, Vertex_Color };
+	const char* shaderConsts[] = { ShaderConstants::VATTR_Pos, ShaderConstants::VATTR_Normal,
+									ShaderConstants::VATTR_BiNormal, ShaderConstants::VATTR_Tangent,
+									ShaderConstants::VATTR_Color };
+	for (int j = 0; j < 5; j++) {
+		VertexAttribute* attrib = vf->getAttributeBySemantic(vaSem[j]);
+		if (attrib) {
+			GLuint i = prog->getAttributeIndex(shaderConsts[j]);
+			attrib->m_vbo->bindAttributeData(i);
 		}
 	}
 }

@@ -13,6 +13,8 @@ public:
 	static const char* const VATTR_Pos;
 	static const char* const VATTR_Normal;
 	static const char* const VATTR_Color;
+	static const char* const VATTR_Tangent;
+	static const char* const VATTR_BiNormal;
 	static const char* const VATTR_TexCoords[8];
 
 	static const char* const Fragment_Color;
@@ -20,7 +22,9 @@ public:
 	static const char* const UNIFORM_ModelViewProj;
 	static const char* const UNIFORM_ModelView;
 	static const char* const UNIFORM_Model;
+	static const char* const UNIFORM_ModelInverse;
 	static const char* const UNIFORM_View;
+	static const char* const UNIFORM_ViewInverse;
 	static const char* const UNIFORM_Proj;
 	static const char* const UNIFORM_NormalMatrix;
 	static const char* const UNIFORM_NumTextures;
@@ -45,6 +49,8 @@ public:
 	static const char* const UNIFORM_LightsType[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsPos[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsDirection[MAX_LIGHTS];
+	static const char* const UNIFORM_LightsWorldPos[MAX_LIGHTS];
+	static const char* const UNIFORM_LightsWorldDirection[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsAmbient[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsDiffuse[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsSpecular[MAX_LIGHTS];

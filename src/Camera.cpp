@@ -12,25 +12,22 @@ void Camera::updateView() {
 	m_rotation.x = wrap(m_rotation.x, -90.0f, 90.0f);
 	m_rotation.y = wrap(m_rotation.y, -360.0f, 360.0f);
 	m_rotation.z = wrap(m_rotation.z, -360.0f, 360.0f);
-	//
+	float pi = 3.1415926535f;
 	float yawRads = deg_to_rads(m_rotation.y);
-	yawRads = clamp(yawRads, -2.0f * M_PI, 2.0f * M_PI);
+	yawRads = clamp(yawRads, -2.0f * pi, 2.0f * pi);
 
 	float pitchRads = deg_to_rads(m_rotation.x);
-	pitchRads = clamp(pitchRads, -M_PI_2, M_PI_2);
+	pitchRads = clamp(pitchRads, -pi / 2.f, pi/2.f);
 
 	float rollRads = deg_to_rads(m_rotation.z);
-	rollRads = clamp(rollRads, -2.0f * M_PI, 2.0f * M_PI);
+	rollRads = clamp(rollRads, -2.0f * pi, 2.0f * pi);
 
 	Matrix4f rotY = Matrix4f::RotationY(yawRads);
 	Matrix4f rotX = Matrix4f::Rotation(m_right, pitchRads);
 
-	m_look = rotX * rotY * Vec3f::Z_Axis;
+	m_look = rotX * rotY * Vec3f::Z_Neg_Axis;
 	m_up = rotX * m_up;
 	m_right = rotY * Vec3f::X_Axis;
-
-	// translate camera
-	m_pos += m_translation.x * m_right + m_translation.y * m_up + m_translation.z * m_look;
 
 	// ortho-normalize basis vectors
 	m_look.normalize();
@@ -41,6 +38,9 @@ void Camera::updateView() {
 
 	m_up = m_right.cross(m_look);
 	m_up.normalize();
+
+	// translate camera
+	m_pos += m_translation.x * m_right + m_translation.y * m_up + m_translation.z * m_look;
 
 	// m_view is the inverse of the camera transformation, transforms from
 	m_view = Matrix4f::FromBasis(m_right, m_up, -m_look);
@@ -56,8 +56,8 @@ void Camera::setLook(Vec3f look) {
 	Vec3f fwd = look - m_pos;
 	fwd.normalize();
 
-	float theta = acos(fwd.z);
-	float phi = atan2(fwd.y, fwd.x);
+	float theta = acosf(fwd.z);
+	float phi = atan2f(fwd.y, fwd.x);
 	m_rotation.x = rads_to_deg(phi);
 	m_rotation.y = rads_to_deg(theta);
 	m_rotation.z = 0.0f;

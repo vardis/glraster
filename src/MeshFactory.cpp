@@ -62,8 +62,8 @@ Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
 		for (uint segment = 0; segment < numSegments; segment++) {
 			float phi = segment * dPhi;
 			float sinTheta = sinf(theta);
-			std::cout << "phi: " << (180.0f / M_PI) * phi << std::endl;
-			std::cout << "theta: " << (180.0f / M_PI) * theta << std::endl;
+			//std::cout << "phi: " << (180.0f / M_PI) * phi << std::endl;
+//			std::cout << "theta: " << (180.0f / M_PI) * theta << std::endl;
 			float x = radius * cosf(phi) * sinTheta;
 			float y = radius * cosf(theta);
 			float z = radius * sinf(phi) * sinTheta;
@@ -135,16 +135,16 @@ Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
 
 			// first and last rings have a single vertex
 			if (ring == 0 || ring == numRings) {
-				std::cout << "BREAK\n";
+//				std::cout << "BREAK\n";
 				break;
 			}
 		}
 	}
 
-	std::cout << "indices copied " << idxCnt << std::endl;
-	std::cout << "vertices copied " << idxVe << std::endl;
-	std::cout << "normals copied " << idxNo << std::endl;
-	std::cout << "uvs copied " << idxUV << std::endl;
+//	std::cout << "indices copied " << idxCnt << std::endl;
+//	std::cout << "vertices copied " << idxVe << std::endl;
+//	std::cout << "normals copied " << idxNo << std::endl;
+//	std::cout << "uvs copied " << idxUV << std::endl;
 
 	vaVertices->m_vbo->unmapData();
 	vaNormals->m_vbo->unmapData();
@@ -291,12 +291,12 @@ Mesh* MeshFactory::createQuad(const Vec3f& center, const Vec3f& facingDir, float
 	*p++ = 2;
 	*p++ = 3;
 
-	vf->printData();
+//	vf->printData();
 
 	Mesh* mesh = new Mesh();
 	mesh->updateVertexData(vf, 4);
 	mesh->updateIndexData(indices, 6);
-	mesh->getIbo()->printData();
+//	mesh->getIbo()->printData();
 	return mesh;
 }
 
@@ -384,6 +384,34 @@ void MeshFactory::_copyVertexNormalsToVertexAttributeArray(aiMesh* mesh, VertexA
 			sData[i * elementCount] = mesh->mNormals[i].x;
 			sData[i * elementCount + 1] = mesh->mNormals[i].y;
 			sData[i * elementCount + 2] = mesh->mNormals[i].z;
+			break;
+		default:
+			break;
+		}
+	}
+	ve->m_vbo->unmapData();
+}
+
+void MeshFactory::_copyVertexBiNormalsToVertexAttributeArray(aiMesh* mesh, VertexAttribute* ve) {
+	float* fData;
+	short* sData;
+	void* data = ve->m_vbo->mapData();
+	size_t elementCount = VertexAttribute::getFormatElementCount(ve->m_format);
+	for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
+		fData = 0;
+		sData = 0;
+		switch (ve->m_format) {
+		case VertexFormat_FLOAT3:
+			fData = reinterpret_cast<float*> (data);
+			fData[i * elementCount] = mesh->mBitangents[i].x;
+			fData[i * elementCount + 1] = mesh->mBitangents[i].y;
+			fData[i * elementCount + 2] = mesh->mBitangents[i].z;
+			break;
+		case VertexFormat_SHORT3:
+			sData = reinterpret_cast<short*> (data);
+			sData[i * elementCount] = mesh->mBitangents[i].x;
+			sData[i * elementCount + 1] = mesh->mBitangents[i].y;
+			sData[i * elementCount + 2] = mesh->mBitangents[i].z;
 			break;
 		default:
 			break;
@@ -589,17 +617,19 @@ Mesh* MeshFactory::_readSingleMesh(aiMesh* importedMesh, std::vector<Material*> 
 	}
 
 	if (importedMesh->HasTangentsAndBitangents()) {
+		std::cout << "Adding tangents and binormals\n";
 		format = VertexFormat_FLOAT3;
 		ve = vf->addAttribute(Vertex_Tangent, format, offset, 0);
-		//		ve->_allocateArrayForElement(importedMesh->mNumVertices);
 		ve->m_vbo->allocate(importedMesh->mNumVertices);
 		_copyVertexTangentsToVertexAttributeArray(importedMesh, ve);
 		offset += importedMesh->mNumVertices * VertexAttribute::getFormatSize(format);
 
-		//		void* bitangetsArray = _allocateArrayForElement(mesh->mNumVertices, VertexFormat_FLOAT3);
-		//		vf->addAttribute(Vertex_Tangent, VertexFormat_FLOAT3, offset, bitangetsArray);
-		//		_copyVertexBiNormalssToVertexAttributeArray(mesh, ve);
-		//		offset += mesh->mNumVertices * VertexAttribute::getFormatSize(VertexFormat_FLOAT3);
+		ve = vf->addAttribute(Vertex_BiNormal, format, offset, 0);
+		ve->m_vbo->allocate(importedMesh->mNumVertices);
+		_copyVertexBiNormalsToVertexAttributeArray(importedMesh, ve);
+		offset += importedMesh->mNumVertices * VertexAttribute::getFormatSize(format);
+	} else {
+		std::cout << "No mesh info for tangents and binormals\n";
 	}
 
 	uint32_t numIndices = 0;

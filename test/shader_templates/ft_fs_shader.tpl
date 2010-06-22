@@ -11,16 +11,23 @@ TEX_COORDS: the swizzle of the texture coordinates, e.g. xy, x, st, etc.
 {{>FRAGMENT_INPUTS}}
 {{UNIFORMS}}
 
-{{#PHONG_LIGHTING}}
+{{#USE_LIGHTING}}
 {{>LIGHTING}}
-{{/PHONG_LIGHTING}}
+{{/USE_LIGHTING}}
 
 out vec4 fs_FragColor;
 
 {{! fragment shader }}
 void main() {
+
+	{{#ALPHA_MAP_APPLICATION}}
+	// alpha maps are applied early to avoid shading fragments that will eventually only be discarded 
+	vec4 alpha = texture(u_Sampler{{TEX_INDEX}}, fs_TexCoords[{{UV_SET_INDEX}}].{{TEX_COORDS}});
+	if (alpha.r < 0.1) discard;
+	{{/ALPHA_MAP_APPLICATION}}
+
 	// receives the final color from the application of the diffuse maps
-	vec4 texDiffuse = uvec4(1.0);
+	vec4 texDiffuse = vec4(1.0);
 
 	// receives the total ambient radiance from all light sources
 	vec4 ambient = vec4(0.0);
@@ -32,20 +39,19 @@ void main() {
 	// receives the total specular radiance from all light sources
 	vec4 specular = vec4(0.0);
 
-	float shininess = u_Material.shininess;
+	// the normal used in shading calculations
+	vec3 N;
 
-	{{#PHONG_LIGHTING}}
-	vec3 N = normalize(fs_Normal);
-	for (int i = 0; i < u_NumLights; i++) {
-		//if (u_Lights[i].type == LT_Directional) {
-			Directional_radiance(i, N, fs_eyePos, ambient, diffuse, specular);
-	/*	} else if (u_Lights[i].type == LT_Lamp) {
-			Lamp_radiance(i, fs_Normal, vec3(u_View[3]), vec3(gl_FragCoord), ambient, diffuse, specular);
-		} else if (u_Lights[i].type == LT_Spot) {
-			Spot_radiance(i, fs_Normal, vec3(u_View[3]), vec3(gl_FragCoord), ambient, diffuse, specular);
-		}*/
-	}
-	{{/PHONG_LIGHTING}}
+	float shininess = u_Material.shininess;	
+
+	{{>TANGENT_SPACE_NORMAL_MAP}}
+
+	{{#GEOMETRIC_NORMAL}}
+	N = normalize(fs_Normal);
+	{{/GEOMETRIC_NORMAL}}
+
+	{{>PHONG_LIGHTING}}
+
 
 	{{! 
 		TEXTURE_STACK_APPLICATION will be equal to the string result of applying template tex_stack.tpl
@@ -55,12 +61,13 @@ void main() {
 	{{>SINGLE_TEXTURE_STACK_ENTRY}}	
 
 
-	{{#PHONG_LIGHTING}}
+	{{#USE_LIGHTING}}
 	texDiffuse *= vec4(diffuse.rgb, 1.0);
-	{{/PHONG_LIGHTING}}
+	{{/USE_LIGHTING}}
 
-	fs_FragColor = /*vec4(1.0) +*/ ambient*u_Material.ambient + texDiffuse*u_Material.diffuse + specular*u_Material.specular;
-//	fs_FragColor = specular*u_Material.specular;
+	//fs_FragColor = /*vec4(1.0) +*/ ambient*u_Material.ambient + texDiffuse*u_Material.diffuse + specular*u_Material.specular;
+	fs_FragColor = texDiffuse*u_Material.diffuse;
+//	fs_FragColor = vec4(N, 1.0);
 //	if (fs_FragColor.a > 0.9) fs_FragColor.rgb = vec3(1.0, 0, 0);
 	gl_FragDepth = gl_FragCoord.z;
 }

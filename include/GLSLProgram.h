@@ -71,6 +71,7 @@ public:
 
 	/** Specialization of setUniform<T> for matrices */
 	void setUniform(int uniformLoc, Matrix4f& mat);
+	void setUniform(int uniformLoc, Matrix3f& mat);
 
 	/** Specialization of setUniform<T> for 3 component vectors */
 	void setUniform(int uniformLoc, Vec3f& vec);
