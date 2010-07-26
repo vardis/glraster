@@ -19,6 +19,8 @@ NUM_TEXTURES : number of active texture units
 
 }}
 
+vec3 u_camPos;
+
 row_major uniform mat4 u_Model;
 row_major uniform mat3 u_ModelInv;
 row_major uniform mat4 u_View;
@@ -32,6 +34,7 @@ struct Material_t {
 	vec4 specular;
 	float shininess;
 	float opacity;
+	vec2 parallaxScaleBias;	// scale is at parallaxScaleBias[0] and bias at parallaxScaleBias[1]
 };
 uniform Material_t u_Material;
 
@@ -59,8 +62,8 @@ uniform int u_NumTextures;
 // all vectors are specified in eye/camera space and directional vectors are normalized
 struct Light_t {
 	int type;	// on of the LT_* constants
-	vec3 pos;	// position in eye space
-	vec3 world_pos;	// position in world space
+	vec4 pos;	// position in eye space
+	vec4 world_pos;	// position in world space
 	vec3 dir;	// direction in eye space
 	vec3 world_dir; // direction in world space
 	vec3 half_vector; // half vector in eye space
@@ -69,6 +72,7 @@ struct Light_t {
 	vec4 diffuse;	
 	vec4 specular;	
 	float cosSpotCutOff;	// cosine of the spot cut-off angle
+	float cosOuterConeSpotCutOff; // cosing of the outer cone of the spot angle
 	float constAttenuation;	// constant attenuation factor
 	float linearAttenuation;
 	float quadraticAttenuation;

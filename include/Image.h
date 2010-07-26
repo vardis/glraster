@@ -66,6 +66,11 @@ public:
 		return m_mipmaps.size();
 	}
 
+	/**
+	 * Sets OpenGL's pixel store attributes according to this image's properties.
+	 */
+	void setPixelStoreAttributes() const;
+
 	bool isCompressed() const;
 
 	bool hasMipmaps() const {

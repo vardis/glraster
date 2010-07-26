@@ -1,4 +1,5 @@
 #include "GLTutor.h"
+#include "GLUtil.h"
 #include "MaterialDB.h"
 #include "Mesh.h"
 #include "MeshModel.h"
@@ -69,6 +70,8 @@ Entity* planeEntity;
 Entity* quadStripEnt;
 Entity* maleEntity;
 Entity* teapotEntity;
+Entity* monkeyEntity;
+EntityPtr cubeEntity;
 
 RenderTargetTexture* g_planeTextureRT;
 PinholeCameraPtr g_camera;
@@ -82,6 +85,10 @@ TextPtr g_text;
 OrthographicCameraPtr g_cam2d;
 
 LightPtr frontLight, backLight;
+LightPtr pointLight;
+LightPtr spotLight;
+
+MaterialPtr billboardMat(new Material());
 
 void displayFunc();
 void reshapeFunc(int width, int height);
@@ -171,7 +178,7 @@ void initialize() {
 
 	g_camera = PinholeCameraPtr(new PinholeCamera());
 	g_camera->setPos(Vec3f(0, 0, 5));
-	g_camera->setLook(Vec3f(0,0,1));
+//	g_camera->setLook(Vec3f(0, 0, -1));
 	g_camera->setNear(0.1f);
 	g_camera->setFar(1000.0f);
 	g_camera->setFov(60.0f);
@@ -200,18 +207,37 @@ void initialize() {
 
 	frontLight = LightPtr(new Light());
 	frontLight->m_type = Light::LightsTypeDirectional;
-	frontLight->m_direction = Vec3f::Z_Neg_Axis;
+	frontLight->m_direction = Vec3f(1.0f, 0.0f, -1.0f);
 	frontLight->m_diffuse = Colour::WHITE;
 	frontLight->m_specular = Colour::WHITE;
 
-//	backLight = LightPtr(new Light());
-//	backLight->m_type = Light::LightsTypeDirectional;
-//	backLight->m_direction = Vec3f::Z_Axis;
-//	backLight->m_diffuse = Colour(1.0f, 0.0f, 0.0f); //Colour::WHITE;
-//	backLight->m_specular = Colour::WHITE;
+	backLight = LightPtr(new Light());
+	backLight->m_type = Light::LightsTypeDirectional;
+	backLight->m_direction = Vec3f::Z_Axis;
+	backLight->m_diffuse = Colour(1.0f, 0.0f, 0.0f); //Colour::WHITE;
+	backLight->m_specular = Colour::WHITE;
+
+	pointLight = LightPtr(new Light());
+	pointLight->m_type = Light::LightsTypeLamp;
+	pointLight->m_position = Vec3f(0.0f, 0.0f, 1.0f);
+	pointLight->m_diffuse = Colour(1.0f, 1.0f, 1.0f);
+	pointLight->m_specular = Colour::WHITE;
+//	pointLight->m_linearAttenuation = 1.0f;
+
+	spotLight = LightPtr(new Light());
+	spotLight->m_type = Light::LightsTypeSpot;
+	spotLight->m_position = Vec3f(0.0f, 0.0f, 1.0f);
+	spotLight->m_direction = Vec3f(0.0f, 0.0f, -1.0f);
+	spotLight->m_diffuse = Colour(1.0f, 1.0f, 1.0f);
+	spotLight->m_specular = Colour::WHITE;
+	spotLight->m_cosSpotCutOff = 0.9f;
+	spotLight->m_cosOuterConeSpotCutOff = 0.8f;
+//	spotLight->m_linearAttenuation = 1.0f;
 
 	g_rasterizer->addLight(frontLight);
-//	g_rasterizer->addLight(backLight);
+	//	g_rasterizer->addLight(backLight);
+//	g_rasterizer->addLight(pointLight);
+//	g_rasterizer->addLight(spotLight);
 
 	loadModels();
 
@@ -222,7 +248,7 @@ void initialize() {
 	//	scene->setActiveSkyMapType(Sky_SphereMap);
 	//	scene->setSphereSkyMap("spheremap.png");
 	scene->setActiveSkyMapType(Sky_CubeMap);
-	scene->setCubeSkyMap("stevecube.jpg");
+	scene->setCubeSkyMap("early_morning.jpg");
 }
 
 void loadModels() {
@@ -232,32 +258,55 @@ void loadModels() {
 
 	///////////////////////////////////////////////////////////////////////
 	// create multi-material cube
-	std::cout << "creating cube\n";
-	std::list<Mesh*> multiMatMeshes = mf.createFromFile("multitex.obj");
-	multiMat = new Entity();
-	std::list<Mesh*>::iterator it = multiMatMeshes.begin();
-	while (it != multiMatMeshes.end()) {
-		MeshModel* model = new MeshModel(*it);
-		multiMat->addRenderable(model);
-		++it;
-	}
-	Matrix4f& m2 = multiMat->getTransform();
-	m2 = Matrix4f::Translation(2.0f, 5.0f, 5.0f) * m2;
-	std::cout << "done cube\n";
+//	std::cout << "creating cube\n";
+//	std::list<Mesh*> multiMatMeshes = mf.createFromFile("multitex.obj");
+//	multiMat = new Entity();
+//	std::list<Mesh*>::iterator it = multiMatMeshes.begin();
+//	while (it != multiMatMeshes.end()) {
+//		MeshModel* model = new MeshModel(*it);
+//		multiMat->addRenderable(model);
+//		++it;
+//	}
+//	Matrix4f& m2 = multiMat->getTransform();
+//	m2 = Matrix4f::Translation(2.0f, 5.0f, 5.0f) * m2;
+//	std::cout << "done cube\n";
 	///////////////////////////////////////////////////////////////////////
+
+//	// create a cube mesh
+//	{
+//		Mesh* cubeMesh = mf.createCube();
+//
+//		MaterialPtr cubeMat(new Material("cubeMat"));
+//		cubeMat->m_twoSided = true;
+//		cubeMat->m_specular.set(0.0f);
+//		cubeMat->m_shadeless = true;
+//
+//		Texture* tex = new Texture();
+//		g_texMgr->loadTexture("rockwall.bmp", tex);
+//
+//		cubeMat->addTexture(TexturePtr(tex), TexMapTo_Diffuse, TexBlendOp_Multiply);
+//		cubeMesh->setMaterial(cubeMat);
+//
+//		cubeEntity = EntityPtr(new Entity());
+//		MeshModel* cubeMeshModel = new MeshModel(cubeMesh);
+//		cubeMeshModel->getRenderState().setCulling(false);
+//		cubeEntity->addRenderable(cubeMeshModel);
+//		Matrix4f& cubeXform = cubeEntity->getTransform();
+//		cubeXform = Matrix4f::Translation(0.0f, 5.0f, 0.0f) * cubeXform;
+//	}
 
 	///////////////////////////////////////////////////////////////////////
 	// create Bob mesh
-	std::list<Mesh*> meshes = mf.createFromFile("data/models/Bob.md5mesh");
-	bobEntity = new Entity();
-	it = meshes.begin();
-	while (it != meshes.end()) {
-		MeshModel* bobModel = new MeshModel(*it);
-		bobEntity->addRenderable(bobModel);
-		++it;
-	}
-	Matrix4f& m = bobEntity->getTransform();
-	m = Matrix4f::Scale(0.1f, 0.1f, 0.1f) * m;
+//	std::list<Mesh*> meshes = mf.createFromFile("data/models/Bob.md5mesh");
+//	bobEntity = new Entity();
+//	it = meshes.begin();
+//	while (it != meshes.end()) {
+//		MeshModel* bobModel = new MeshModel(*it);
+//		bobEntity->addRenderable(bobModel);
+//		++it;
+//	}
+//	Matrix4f& m = bobEntity->getTransform();
+//	m = Matrix4f::Scale(0.1f, 0.1f, 0.1f) * m;
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
@@ -309,13 +358,39 @@ void loadModels() {
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
+	// create monkey mesh
+	 {
+		Texture* tex = new Texture();
+		tex->m_useMipmaps = false;
+		g_texMgr->loadTexture("uvgrid.png", tex);
+
+		std::list<Mesh*> monkeMeshes = mf.createFromFile("unwrap.ply", true, true);
+		monkeyEntity = new Entity();
+		std::list<Mesh*>::iterator it = monkeMeshes.begin();
+		while (it != monkeMeshes.end()) {
+			MeshModel* monkeyModel = new MeshModel(*it);
+
+			MaterialPtr mat = monkeyModel->getMaterial();
+			mat->addTexture(TexturePtr(tex), TexMapTo_Diffuse, TexBlendOp_Multiply, TexMapInput_UV);
+
+			monkeyEntity->addRenderable(monkeyModel);
+			++it;
+		}
+
+		Matrix4f& m1 = monkeyEntity->getTransform();
+		m1 = Matrix4f::Translation(4.0f, 0.4f, -2.0f) * m1;
+	}
+
+	///////////////////////////////////////////////////////////////////////
 	// create billboard
-	MaterialPtr billboardMat(new Material());
+
 	{
 		billboardMat->m_name = "billboardMat";
 		billboardMat->m_twoSided = true;
 		billboardMat->m_diffuse.set(1.0f);
-		billboardMat->m_specular.set(0.0f);
+		billboardMat->m_specular.set(1.0f);
+		billboardMat->m_shininess = 20.0f;
+
 		//		billboardMat->m_shadeless = true;
 		//	billboardMat->setCustomShaders(true);
 		//	billboardMat->setFragmentShader("fs.glsl");
@@ -324,22 +399,30 @@ void loadModels() {
 		Texture* tex = new Texture();
 		tex->m_useMipmaps = true;
 		tex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
-		tex->m_magFilter = TexFilter_Bilinear;
-		g_texMgr->loadTexture(/*"fgrass1_v2_256.png" */"rockwall.tga", tex);
+		tex->m_magFilter = TexFilter_Bilinear_Mipmap_Bilinear;
+		g_texMgr->loadTexture(/*"fgrass1_v2_256.png" */"rockwall.bmp", tex);
 		billboardMat->m_texStack->textures[0].reset(tex);
 		billboardMat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
 
 		Texture* normalTex = new Texture();
 		normalTex->m_useMipmaps = false;
-		g_texMgr->loadTexture("rockwall_NH.bmp", normalTex);
+		g_texMgr->loadTexture("rockwall_NormalMap.bmp", normalTex);
 		normalTex->configureGLState();
-		billboardMat->m_texStack->textures[1].reset(normalTex);
-		normalTex->m_minFilter = TexFilter_Bilinear;
+		billboardMat->addTexture(TexturePtr(normalTex), TexMapTo_Normal);
+		normalTex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
 		normalTex->m_magFilter = TexFilter_Bilinear;
 		normalTex->setWrapping(TexWrapMode_Repeat);
-		billboardMat->m_texStack->texOutputs[1].mapTo = TexMapTo_Normal;
 
-		Billboard* bb = new Billboard(Billboard_Spherical, 1.0f, 1.0f);
+		Texture* parallaxTex = new Texture();
+		parallaxTex->m_useMipmaps = true;
+		g_texMgr->loadTexture("rockwall_Parallax.bmp", parallaxTex);
+		parallaxTex->configureGLState();
+		billboardMat->addTexture(TexturePtr(parallaxTex), TexMapTo_Parallax);
+		parallaxTex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
+		parallaxTex->m_magFilter = TexFilter_Bilinear;
+		parallaxTex->setWrapping(TexWrapMode_Repeat);
+
+		BillboardPtr bb = Billboard::create(Billboard_Spherical, 1.0f, 1.0f);
 		bb->setMaterial(billboardMat);
 		bb->getRenderState().setCulling(false);
 
@@ -364,11 +447,11 @@ void loadModels() {
 		tex->m_useMipmaps = true;
 		tex->m_minFilter = TexFilter_Bilinear_Mipmap_Bilinear;
 		tex->m_magFilter = TexFilter_Bilinear;
-		g_texMgr->loadTexture("rockwall.tga", tex);
+		g_texMgr->loadTexture("rockwall.bmp", tex);
 		billboardMat->m_texStack->textures[0].reset(tex);
 		billboardMat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
 
-		Billboard* bb = new Billboard(Billboard_Spherical, 1.0f, 1.0f);
+		BillboardPtr bb = Billboard::create(Billboard_Spherical, 1.0f, 1.0f);
 		bb->setMaterial(billboardMat);
 		bb->getRenderState().setCulling(false);
 
@@ -394,8 +477,14 @@ void loadModels() {
 	qs->specifyVertexFormat(VertexFormatPtr(vf));
 	qs->beginGeometry(3);
 
-	float quads_pos[] = { -1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-							1.0f, -1.0f, 0.0f, 2.0f, 1.0f, 0.0f, 2.0f, -1.0f, 0.0f };
+	float quads_pos[] = { -1.0f, 1.0f, 0.0f,
+	                      -1.0f, -1.0f, 0.0f,
+	                      0.0f, 1.0f, 0.0f,
+	                      0.0f, -1.0f, 0.0f,
+	                      1.0f, 1.0f, 0.0f,
+	 					  1.0f, -1.0f, 0.0f,
+	 					  2.0f, 1.0f, 0.0f,
+	 					  2.0f, -1.0f, 0.0f };
 	qs->vertexAttribArray(Vertex_Pos, quads_pos);
 
 	float quads_normals[] = { 0.0f, 0.0f, 1.0f };
@@ -422,13 +511,13 @@ void loadModels() {
 	quadStripEnt = new Entity();
 	quadStripEnt->addRenderable(qs);
 
-	Matrix4f& stripMat = quadStripEnt->getTransform();
-	stripMat = Matrix4f::Translation(4.0f, 0.0f, 0.0f);
+//	Matrix4f& stripMat = quadStripEnt->getTransform();
+//	stripMat = Matrix4f::Translation(4.0f, 0.0f, 0.0f);
 
 	///////////////////////////////////////////////////////////////////////
 
 	g_text.reset(new Text(g_font));
-	//	g_text->setPos(100 - g_viewport->m_width/2, 100 - g_viewport->m_height/2);
+	//		g_text->setPos(100 - g_viewport->m_width/2, 100 - g_viewport->m_height/2);
 	Matrix4f& mtxt = g_text->getTransform();
 	mtxt = Matrix4f::Translation(10.0f - g_viewport->m_width / 2.0f, 10.0f - g_viewport->m_height / 2.0f, 0.0f) * mtxt;
 	g_text->setText("hello");
@@ -470,7 +559,9 @@ void loadModels() {
 
 void displayFunc() {
 
-	//	glDisable(GL_CULL_FACE);
+	// Note: necessary as the text's render state set the depth mask to false
+	GLUtil::setDefaultGLState();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	yaw = clamp(yaw, -360.0f, 360.0f);
 	pitch = clamp(pitch, -90.0f, 90.0f);
@@ -479,10 +570,6 @@ void displayFunc() {
 	g_cam2d->updateViewProj();
 
 	//	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
-	//	rtt(g_planeTextureRT);
-	render(g_camera, g_viewport);
-
 	long elapsed = timer.getMillis();
 	g_lastTime += elapsed;
 
@@ -490,28 +577,29 @@ void displayFunc() {
 		std::stringstream ss;
 		ss << "Frame time: " << elapsed << " ms";
 
-		g_text->setTransform(Matrix4f::Translation(10 - g_viewport->m_width / 2, 10 - g_viewport->m_height / 2, 0.0f));
+		g_text->setTransform(Matrix4f::Translation(10.0f - g_viewport->m_width / 2.0f, 10.0f - g_viewport->m_height	/ 2.0f, 0.0f));
 		g_text->setText(ss.str());
 		g_lastTime -= 1000;
 	}
 
-	//	g_rasterizer->render(g_text.get(), g_cam2d);
+	//	rtt(g_planeTextureRT);
+	render(g_camera, g_viewport);
+
+//	g_rasterizer->render(g_text.get(), g_cam2d, 1);
 
 	glutSwapBuffers();
 }
 
 void render(PinholeCameraPtr camera, ViewportPtr viewport) {
-	//	glEnable(GL_DEPTH_TEST);
-	//	glDepthFunc(GL_LEQUAL);
 
 	glViewport(viewport->m_x, viewport->m_y, viewport->m_width, viewport->m_height);
 	glClearColor(viewport->m_clearColor.r, viewport->m_clearColor.g, viewport->m_clearColor.b, viewport->m_clearColor.a);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
 	//	glPushMatrix();
 	//	Vec3f& p = g_camera->getPos();
 	//	glTranslatef(p.x, p.y, p.z);
-	//	scene->renderSky(g_rasterizer);
+//		scene->renderSky(g_rasterizer);
 	//	glPopMatrix();
 
 
@@ -537,21 +625,33 @@ void render(PinholeCameraPtr camera, ViewportPtr viewport) {
 	 g_rasterizer->getRenderLayer(0).addRenderable(r);
 	 }*/
 
+	for (uint32_t i = 0; i < monkeyEntity->getNumRenderables(); i++) {
+		Renderable* r = monkeyEntity->getRenderable(i);
+		r->setTransform(monkeyEntity->getTransform());
+		g_rasterizer->getRenderLayer(0).addRenderable(r);
+	}
+
+	// render cube
+//	Renderable* cube = cubeEntity->getRenderable(0);
+//	cube->setTransform(cubeEntity->getTransform());
+//	g_rasterizer->getRenderLayer(0).addRenderable(cube);
+
 	// render billboard
-		Renderable* bb = billboardEntity->getRenderable(0);
-		bb->setTransform(billboardEntity->getTransform());
-		g_rasterizer->getRenderLayer(0).addRenderable(bb);
+//	Renderable* bb = billboardEntity->getRenderable(0);
+//	bb->setTransform(billboardEntity->getTransform());
+//	g_rasterizer->getRenderLayer(0).addRenderable(bb);
 
 	// render normal mapped billboard
-//		Renderable* bbNMap = billboardNMapEntity->getRenderable(0);
-//		bbNMap->setTransform(billboardNMapEntity->getTransform());
-//		g_rasterizer->getRenderLayer(0).addRenderable(bbNMap);
+	//		Renderable* bbNMap = billboardNMapEntity->getRenderable(0);
+	//		bbNMap->setTransform(billboardNMapEntity->getTransform());
+	//		g_rasterizer->getRenderLayer(0).addRenderable(bbNMap);
 
 
 	// render quad strip
-	Renderable* qs = quadStripEnt->getRenderable(0);
-	qs->setTransform(quadStripEnt->getTransform());
-	g_rasterizer->getRenderLayer(0).addRenderable(qs);
+//	Renderable* qs = quadStripEnt->getRenderable(0);
+//	qs->setTransform(quadStripEnt->getTransform());
+//	g_rasterizer->getRenderLayer(0).addRenderable(qs);
+
 	/*
 	 // render multi-material cube
 	 for (uint32_t i = 0; i < multiMat->getNumRenderables(); i++) {
@@ -640,6 +740,26 @@ void keyboardFunc(unsigned char key, int x, int y) {
 		camMoved = true;
 		g_camera->setPos(5.0f, 2.0f, 10.0f);
 		g_camera->setLook(Vec3f::Zero);
+	} else if (key == 'o') {
+		spotLight->m_cosSpotCutOff -= 0.1f;
+		spotLight->m_cosOuterConeSpotCutOff -= 0.1f;
+		std::cout << "spotligt cut off angle: " << spotLight->m_cosSpotCutOff << "\n";
+	} else if (key == 'p') {
+		spotLight->m_cosSpotCutOff += 0.1f;
+		spotLight->m_cosOuterConeSpotCutOff += 0.1f;
+		std::cout << "spotligt cut off angle: " << spotLight->m_cosSpotCutOff << "\n";
+	} else if (key == ',') {
+		billboardMat->m_parallaxScale -= 0.01f;
+		std::cout << "parallax scale: " << billboardMat->m_parallaxScale << "\n";
+	} else if (key == '.') {
+		billboardMat->m_parallaxScale += 0.01f;
+		std::cout << "parallax scale: " << billboardMat->m_parallaxScale << "\n";
+	} else if (key == '<') {
+		billboardMat->m_parallaxBias -= 0.01f;
+		std::cout << "parallax bias: " << billboardMat->m_parallaxBias << "\n";
+	} else if (key == '>') {
+		billboardMat->m_parallaxBias += 0.01f;
+		std::cout << "parallax bias: " << billboardMat->m_parallaxBias << "\n";
 	}
 }
 

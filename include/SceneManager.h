@@ -53,7 +53,7 @@ protected:
 
 	Entity* m_skybox;
 	MeshModelPtr m_sphereSkyModel;
-	MeshModelPtr m_skyboxModels[6];
+	MeshModelPtr m_skyboxModel;
 
 	void _loadCubeMapTextures(String mapFilename);
 };

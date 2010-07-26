@@ -260,11 +260,20 @@ void Image::allocate() {
 
 bool Image::saveToFile(const String& filename) {
 	ilImage il;
-	uint8_t bpp = m_pitch / m_width;
+	uint32_t bpp = m_pitch / m_width;
 	il.TexImage(m_width, m_height, 1, bpp, _getILFormatFromGLFormat(m_format), _getILTypeFromGLType(m_dataType), m_mipmaps[0].m_data.get());
 	return il.Save(filename.data());
 }
 
 bool Image::isCompressed() const {
 	return GLUtil::isCompressedFormat(m_format);
+}
+
+void Image::setPixelStoreAttributes() const {
+	//TODO: Get pixel store parameters from image
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+	glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 }

@@ -44,7 +44,7 @@ protected:
 	bool m_scissor;
 
 	/** origin and dimensions of the scissor rectangle */
-	float m_scissorLeft, m_scissorBottom, m_scissorWidth, m_scissorHeight;
+	GLsizei m_scissorLeft, m_scissorBottom, m_scissorWidth, m_scissorHeight;
 
 	/** indicates if stencil test is enabled or not */
 	bool m_stencil;
@@ -212,19 +212,19 @@ public:
 		return m_scissor;
 	}
 
-	float getScissorLeft() const {
+	GLsizei getScissorLeft() const {
 		return m_scissorLeft;
 	}
 
-	float getScissorBottom() const {
+	GLsizei getScissorBottom() const {
 		return this->m_scissorBottom;
 	}
 
-	float getScissorWidth() const {
+	GLsizei getScissorWidth() const {
 		return this->m_scissorWidth;
 	}
 
-	float getScissorHeight() const {
+	GLsizei getScissorHeight() const {
 		return this->m_scissorHeight;
 	}
 
@@ -304,19 +304,19 @@ public:
 		this->m_scissor = scissor;
 	}
 
-	void setScissorLeft(float scissorLeft) {
+	void setScissorLeft(GLsizei scissorLeft) {
 		this->m_scissorLeft = scissorLeft;
 	}
 
-	void setScissorBottom(float scissorBottom) {
+	void setScissorBottom(GLsizei scissorBottom) {
 		this->m_scissorBottom = scissorBottom;
 	}
 
-	void setScissorWidth(float scissorWidth) {
+	void setScissorWidth(GLsizei scissorWidth) {
 		this->m_scissorWidth = scissorWidth;
 	}
 
-	void setScissorHeight(float scissorHeight) {
+	void setScissorHeight(GLsizei scissorHeight) {
 		this->m_scissorHeight = scissorHeight;
 	}
 

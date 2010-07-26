@@ -15,20 +15,20 @@ const char* const ShaderGenerator::TEX_INDEX = "TEX_INDEX";
 const char* const ShaderGenerator::UV_SET_INDEX = "UV_SET_INDEX";
 const char* const ShaderGenerator::S_COORD = "s";
 const char* const ShaderGenerator::ST_COORDS = "st";
+const char* const ShaderGenerator::STP_COORDS = "stp";
 const char* const ShaderGenerator::TANGENT_SPACE_NMAP_TPL = "shader_templates/tangent_space_nmap.tpl";
 
 ShaderGenerator::ShaderGenerator() {
-	// TODO Auto-generated constructor stub
 
 }
 
 ShaderGenerator::~ShaderGenerator() {
-	// TODO Auto-generated destructor stub
 }
 
 void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, const VertexFormat& vf) {
 
 	bool hasNormalMap = false;
+	bool hasParallaxMap = false;
 
 	ctemplate::TemplateDictionary vertexShaderDict("vertexShader");
 	ctemplate::TemplateDictionary fragmentShaderDict("fragmentShader");
@@ -91,6 +91,9 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 	//	1. Declares a respective uniform sampler object which will be named as u_sampler#,
 	//     where # is the active texture index.
 	//  2. Emits code for any texture coordinates generation scheme, if not simple UV.
+
+	ctemplate::TemplateDictionary* parallaxMapDict = 0;
+
 	for (int i = 0; i < MAX_TEXTURES_STACK; i++) {
 		TexturePtr tex = mat.m_texStack->textures[i];
 		if (tex) {
@@ -102,6 +105,7 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 
 			ctemplate::TemplateDictionary* alphaMapDict = 0;
 			ctemplate::TemplateDictionary* tangentNormalMapDict = 0;
+			ctemplate::TemplateDictionary* offsetMappingDict = 0;
 
 			// depending on the texture's mapTo, we will emit different sections in the template
 			ctemplate::TemplateDictionary* texMapToDict = 0;
@@ -121,7 +125,15 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 			case TexMapTo_Normal:
 				tangentNormalMapDict = fragmentShaderDict.AddIncludeDictionary("TANGENT_SPACE_NORMAL_MAP");
 				tangentNormalMapDict->SetFilename(TANGENT_SPACE_NMAP_TPL);
+				parallaxMapDict = tangentNormalMapDict;
 				hasNormalMap = true;
+				break;
+			case TexMapTo_Parallax:
+				/* IMPORTANT: Parallax maps must come after the normal maps */
+				if (parallaxMapDict) {
+					offsetMappingDict = parallaxMapDict->AddSectionDictionary("PARALLAX_OFFSET_MAPPING");
+				}
+				hasParallaxMap = true;
 				break;
 			default:
 				SAFE_THROW(GLException(E_NOTIMPL, "Unimplemented texture output mapping mode"))
@@ -138,6 +150,10 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 			if (tangentNormalMapDict) {
 				tangentNormalMapDict->SetIntValue(TEX_INDEX, activeTextures);
 				tangentNormalMapDict->SetIntValue(UV_SET_INDEX, mat.m_texStack->texInputs[i].uvSet);
+			}
+			if (offsetMappingDict) {
+				offsetMappingDict->SetIntValue(TEX_INDEX, activeTextures);
+				offsetMappingDict->SetIntValue(UV_SET_INDEX, mat.m_texStack->texInputs[i].uvSet);
 			}
 
 			switch (mat.m_texStack->texOutputs[i].blendOp) {
@@ -161,32 +177,35 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 			ctemplate::TemplateDictionary* samplerDict = uniformsDict->AddSectionDictionary("SINGLE_SAMPLER_DECL");
 			samplerDict->SetIntValue(TEX_INDEX, activeTextures);
 
+			const char* samplerToken;
+			const char* coordsToken;
 			switch (tex->getTextureTarget()) {
 			case GL_TEXTURE_1D:
-				samplerDict->SetValue("SAMPLER_SPEC", "sampler1D");
-				texUnitDict->SetValue(TEX_COORDS, S_COORD);
-
-				if (alphaMapDict) {
-					alphaMapDict->SetValue(TEX_COORDS, S_COORD);
-				}
-
-				if (tangentNormalMapDict) {
-					tangentNormalMapDict->SetValue(TEX_COORDS, S_COORD);
-				}
-
+				samplerToken = "sampler1D";
+				coordsToken = S_COORD;
+				break;
+			case GL_TEXTURE_CUBE_MAP:
+				samplerToken = "samplerCube";
+				coordsToken = STP_COORDS;
 				break;
 			case GL_TEXTURE_2D:
 			default:
-				samplerDict->SetValue("SAMPLER_SPEC", "sampler2D");
-				texUnitDict->SetValue(TEX_COORDS, ST_COORDS);
-
-				if (alphaMapDict) {
-					alphaMapDict->SetValue(TEX_COORDS, ST_COORDS);
-				}
-				if (tangentNormalMapDict) {
-					tangentNormalMapDict->SetValue(TEX_COORDS, ST_COORDS);
-				}
+				samplerToken = "sampler2D";
+				coordsToken = ST_COORDS;
 				break;
+			}
+
+			samplerDict->SetValue("SAMPLER_SPEC", samplerToken);
+			texUnitDict->SetValue(TEX_COORDS, coordsToken);
+
+			if (alphaMapDict) {
+				alphaMapDict->SetValue(TEX_COORDS, coordsToken);
+			}
+			if (tangentNormalMapDict) {
+				tangentNormalMapDict->SetValue(TEX_COORDS, coordsToken);
+			}
+			if (offsetMappingDict) {
+				offsetMappingDict->SetValue(TEX_COORDS, coordsToken);
 			}
 
 			// When a special texture coordinate generation system is used, we have to include
@@ -195,6 +214,7 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 			// instantiate a SINGLE_TEX_COORDS_GEN section with an appropriately initialized dictionary
 			ctemplate::TemplateDictionary* singleTexGen = texGenDict->AddSectionDictionary("SINGLE_TEXCOORDS_ASSIGN");
 			singleTexGen->SetIntValue(UV_SET_INDEX, mat.m_texStack->texInputs[i].uvSet);
+			singleTexGen->SetValue(TEX_COORDS, coordsToken);
 
 			TexMapInput inputMapping = mat.m_texStack->texInputs[i].mapping;
 			if (inputMapping != TexMapInput_UV) {
@@ -206,7 +226,7 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 				}
 				switch (inputMapping) {
 				case TexMapInput_Normal:
-					singleTexGen->ShowSection("SPHERE_TEXGEN");
+					singleTexGen->ShowSection("NORMAL_TEXGEN");
 					break;
 				case TexMapInput_Refl:
 					singleTexGen->ShowSection("REFLECTION_TEXGEN");
@@ -219,6 +239,9 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 					break;
 				case TexMapInput_ObjectSpace:
 					singleTexGen->ShowSection("OBJECT_TEXGEN");
+					break;
+				case TexMapInput_Cube:
+					singleTexGen->ShowSection("CUBE_TEXGEN");
 					break;
 				default:
 					SAFE_THROW(GLException(E_NOTIMPL, "Unimplemented texture mapping mode"))

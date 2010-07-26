@@ -42,6 +42,18 @@ VertexFormat* VertexFormat::create(enum VertexFormatTemplates vfTemplate) {
 		vf->addAttribute(Vertex_Color, VertexFormat_FLOAT4);
 		return vf;
 		break;
+	case VF_V3_N3:
+		vf = new VertexFormat();
+		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_Normal, VertexFormat_FLOAT3);
+		return vf;
+		break;
+	case VF_V3_T2:
+		vf = new VertexFormat();
+		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
+		vf->addAttribute(Vertex_TexCoord0, VertexFormat_FLOAT2);
+		return vf;
+		break;
 	case VF_V3_N3_T2:
 		vf = new VertexFormat();
 		vf->addAttribute(Vertex_Pos, VertexFormat_FLOAT3);
@@ -112,10 +124,12 @@ void VertexFormat::printData() {
 	for (uint8_t i = 0; i < m_numAttributes; i++) {
 		VertexAttribute* va = this->getAttributeByIndex(i);
 		float* fp = (float*) va->m_vbo->mapData();
-		std::cout << "Print attribute with semantic: " << va->m_semantic << " having " << va->m_vbo->m_numElements << " elements\n";
+		std::cout << "Print attribute with semantic: " << va->m_semantic << " having " << va->m_vbo->m_numElements
+				<< " elements\n";
 		uint32_t count = va->getFormatElementCount(va->m_format);
-		for (uint32_t e = 0, c = 0; e < va->m_vbo->m_numElements*count; e++) {
-			if (!c) std::cout << "(";
+		for (uint32_t e = 0, c = 0; e < va->m_vbo->m_numElements * count; e++) {
+			if (!c)
+				std::cout << "(";
 
 			std::cout << *fp++ << ", ";
 

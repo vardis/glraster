@@ -188,9 +188,24 @@ Matrix4<T> Matrix4<T>::operator*(const Matrix4<T>& _mat) const {
 }
 
 template<typename T>
+Vec4<T> Matrix4<T>::operator*(const Vec4<T>& _v) const {
+	return Vec4<T> (
+			m[0][0] * _v.x + m[0][1] * _v.y + m[0][2] * _v.z + m[0][3] * _v.w,
+			m[1][0] * _v.x + m[1][1] * _v.y + m[1][2] * _v.z + m[1][3] * _v.w,
+			m[2][0] * _v.x + m[2][1] * _v.y + m[2][2] * _v.z + m[2][3] * _v.w,
+			m[3][0] * _v.x + m[3][1] * _v.y + m[3][2] * _v.z + m[3][3] * _v.w);
+}
+
+template<typename T>
 Vec3<T> Matrix4<T>::operator*(const Vec3<T>& _v) const {
 	return Vec3<T> (m[0][0] * _v.x + m[0][1] * _v.y + m[0][2] * _v.z, m[1][0] * _v.x + m[1][1] * _v.y + m[1][2] * _v.z,
 			m[2][0] * _v.x + m[2][1] * _v.y + m[2][2] * _v.z);
+}
+
+template<typename T>
+T Matrix4<T>::operator()(uint row, uint column) const {
+	assert(row < 4 && column < 4);
+	return m[row][column];
 }
 
 template<typename T>

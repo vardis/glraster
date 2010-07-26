@@ -37,6 +37,8 @@ enum TexMapTo {
 	TexMapTo_Diffuse,
 	/** texture affects the normal vector */
 	TexMapTo_Normal,
+	/** texture acts as a parallax map and affects the normal vector */
+	TexMapTo_Parallax,
 	/** texture affects the specular colour */
 	TexMapTo_CSpecular,
 	/** texture affects the amount of shininess */
@@ -83,12 +85,24 @@ enum TexBlendOp {
 typedef enum TexBlendOp TexBlendOp;
 
 enum TexFilter {
+	// maps to GL_NEAREST
 	TexFilter_Linear,
+
+	// maps to GL_NEAREST_MIPMAP_NEAREST
 	TexFilter_Linear_Mipmap_Linear,
+
+	// maps to GL_NEAREST_MIPMAP_LINEAR
 	TexFilter_Linear_Mipmap_Bilinear,
+
+	// maps to GL_LINEAR
 	TexFilter_Bilinear,
+
+	// maps to GL_LINEAR_MIPMAP_NEAREST
 	TexFilter_Bilinear_Mipmap_Linear,
+
+	// maps to GL_LINEAR_MIPMAP_LINEAR
 	TexFilter_Bilinear_Mipmap_Bilinear,
+
 	TexFilter_Anisotropic
 };
 
@@ -100,9 +114,9 @@ class Texture {
 public:
 	String m_filename;
 	bool m_allocated;
-	uint16_t m_width;
-	uint16_t m_height;
-	uint16_t m_sourceWidth, m_sourceHeight;
+	uint32_t m_width;
+	uint32_t m_height;
+	uint32_t m_sourceWidth, m_sourceHeight;
 	GLuint m_texID;
 	GLenum m_textureTarget;
 
@@ -121,29 +135,29 @@ public:
 
 public:
 	Texture();
-	~Texture();
+	virtual ~Texture();
 
-	void fromImage(const Image& img);
+	virtual void fromImage(const Image& img);
 
 	/** Allocates graphics resources */
-	bool allocate();
+	virtual bool allocate();
 
 	/** Allocates resources for the specified internal format and data */
-	void allocate(GLenum internalFormat, void* data, uint32_t compressedSize = 0);
+	virtual void allocate(GLenum internalFormat, void* data, uint32_t compressedSize = 0);
 
 	/** Binds and configures OGL texture and material state variables according to this texture's settings */
-	void configureGLState();
+	virtual void configureGLState();
 
 	/** Binds the texture if it has been allocated, otherwise it has no effect */
-	void bind();
+	virtual void bind();
 
-	void setData(GLenum sourceFormat, GLenum dataType, void* data);
-	void setMipmapData(uint8_t level, GLenum sourceFormat, GLenum dataType, void* data);
+	virtual void setData(GLenum sourceFormat, GLenum dataType, void* data);
+	virtual void setMipmapData(uint level, GLenum sourceFormat, GLenum dataType, void* data);
 
-	void setCompressedData(uint32_t size, void* data);
-	void setCompressedMipmapData(uint8_t level, uint32_t size, void* data);
+	virtual void setCompressedData(uint32_t size, void* data);
+	virtual void setCompressedMipmapData(uint level, uint32_t size, void* data);
 
-	void updateMipmaps();
+	virtual void updateMipmaps();
 
 	bool isCompressed() const;
 
@@ -159,7 +173,7 @@ public:
 		return m_height;
 	}
 
-	void setHeight(uint32_t m_height) {
+	void setHeight(uint16_t m_height) {
 		this->m_height = m_height;
 	}
 
@@ -239,7 +253,7 @@ public:
 		this->m_minFilter = minFilter;
 	}
 
-	void setSourceWidth(uint32_t sourceWidth) {
+	void setSourceWidth(uint16_t sourceWidth) {
 		this->m_sourceWidth = sourceWidth;
 	}
 
@@ -255,7 +269,7 @@ public:
 		this->m_useMipmaps = useMipmaps;
 	}
 
-	void setWidth(uint32_t m_width) {
+	void setWidth(uint16_t m_width) {
 		this->m_width = m_width;
 	}
 
@@ -263,11 +277,12 @@ public:
 		this->m_wrapping = m_wrapping;
 	}
 
-private:
+protected:
+	void _deallocate();
 	void _allocateMipmaps();
-	GLint _getInternalFormat(GLenum format, GLenum type);
+
 };
-typedef struct Texture Texture;
+
 typedef shared_ptr<Texture> TexturePtr;
 
 #endif /* TEXTURE_H_ */

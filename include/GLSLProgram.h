@@ -73,8 +73,14 @@ public:
 	void setUniform(int uniformLoc, Matrix4f& mat);
 	void setUniform(int uniformLoc, Matrix3f& mat);
 
+	/** Specialization of setUniform<T> for 4 component vectors */
+	void setUniform(int uniformLoc, Vec4f& vec);
+
 	/** Specialization of setUniform<T> for 3 component vectors */
 	void setUniform(int uniformLoc, Vec3f& vec);
+
+	/** Specialization of setUniform<T> for 2 component vectors */
+	void setUniform(int uniformLoc, Vec2f& vec);
 
 	/** Specialization of setUniform<T> for floating point uniforms */
 	void setUniform(int uniformLoc, float value);

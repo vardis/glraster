@@ -51,6 +51,8 @@ template class Vec2<float>;
 template class Vec2<double>;
 template class Vec3<float>;
 template class Vec3<double>;
+template class Vec4<float>;
+template class Vec4<double>;
 #endif
 
 // Function templates instantiations
@@ -63,3 +65,32 @@ template Vec3<double> operator*(float _r, const Vec3<double>& _v);
 template Vec3<double> operator*(double _r, const Vec3<double>& _v);
 template Vec3<double> operator*(int _r, const Vec3<double>& _v);
 
+
+template<typename T>
+bool operator==(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+	return lhs.approximatelyEqual(rhs);
+}
+
+template<typename T>
+Vec4<T> operator*(float _r, const Vec4<T>& _v) {
+	return Vec4<T> (_r * _v.x, _r * _v.y, _r * _v.z, _r * _v.w);
+}
+
+template<typename T>
+Vec4<T> operator*(double _r, const Vec4<T>& _v) {
+	return Vec4<T> (_r * _v.x, _r * _v.y, _r * _v.z, _r * _v.w);
+}
+
+template<typename T>
+Vec4<T> operator*(int _r, const Vec4<T>& _v) {
+	return Vec4<T> (_r * _v.x, _r * _v.y, _r * _v.z, _r * _v.w);
+}
+
+template bool operator==(const Vec4<float>& _v1, const Vec4<float>& _v2);
+template Vec4<float> operator*(float _r, const Vec4<float>& _v);
+template Vec4<float> operator*(double _r, const Vec4<float>& _v);
+template Vec4<float> operator*(int _r, const Vec4<float>& _v);
+
+template Vec4<double> operator*(float _r, const Vec4<double>& _v);
+template Vec4<double> operator*(double _r, const Vec4<double>& _v);
+template Vec4<double> operator*(int _r, const Vec4<double>& _v);

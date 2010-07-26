@@ -21,6 +21,122 @@ MeshFactory::MeshFactory(/*MaterialDB* matDB,*/ITextureManager* texMgr) :
 MeshFactory::~MeshFactory() {
 }
 
+Mesh* MeshFactory::createCube() {
+
+	int numVertices = 8;
+	int numIndices = 36;
+
+	VertexFormat* vf = VertexFormat::create(VF_V3_N3); //_T2);
+	VertexAttribute* vaVertices = vf->getAttributeBySemantic(Vertex_Pos);
+	vaVertices->m_vbo->allocate(numVertices);
+
+	VertexAttribute* vaNormals = vf->getAttributeBySemantic(Vertex_Normal);
+	vaNormals->m_vbo->allocate(numVertices);
+
+//	VertexAttribute* vaTexCoords = vf->getAttributeBySemantic(Vertex_TexCoord0);
+//	vaTexCoords->m_vbo->allocate(numVertices);
+
+	// map to client address space for manipulation
+	float* pos = reinterpret_cast<float*> (vaVertices->m_vbo->mapData());
+	float* normals = reinterpret_cast<float*> (vaNormals->m_vbo->mapData());
+//	float* uvs = reinterpret_cast<float*> (vaTexCoords->m_vbo->mapData());
+
+	IndexArrayPtr ib(new uint32_t[numIndices]);
+	uint32_t* indices = ib.get();
+
+	float cubeVerts[] = {
+	                      1.0f, -1.0f, -1.0f,
+	                      1.0f, -1.0f, 1.0f,
+	                      -1.0f, -1.0f, 1.0f,
+	                      -1.0f, -1.0f, -1.0f,
+	                      1.0f, 1.0f, -1.0f,
+	                      1.0f, 1.0f, 1.0f,
+	                      -1.0f, 1.0f, 1.0f,
+	                      -1.0f, 1.0f, -1.0f
+	};
+
+	float cubeNormals[] = {
+							0.0f, 0.0f, -1.0f,
+							-1.0f, 0.0f, 0.0f,
+							0.0f, 0.0f, 1.0f,
+							0.0f, 0.0f, 1.0f,
+							1.0f, 0.0f, 0.0f,
+						   1.0f, 0.0f, 0.0f,
+							0.0f, 1.0f, 0.0f,
+							0.0f -1.0f, 0.0f,
+	};
+/*
+	float cubeUVs[] = {
+	 0.333333, 0.498471,
+	 0.001020, 0.500000,
+	 0.332314, 0.000000,
+	 0.000000, 0.001529,
+	 0.000000, 0.998471,
+	 0.333333, 0.501529,
+	 0.332314, 1.000000,
+	 0.998981, 0.500000,
+	 1.000000, 0.998471,
+	 0.666667, 0.501529,
+	 0.667686, 1.000000,
+	 0.665647, 0.000000,
+	 0.666667, 0.498471,
+	 0.333333, 0.001529,
+	 0.334353, 0.500000,
+	 1.000000, 0.001529,
+	 0.667686, 0.000000,
+	 0.334353, 1.000000,
+	 0.665647, 0.500000,
+	 0.666667, 0.998471
+	};
+*/
+	// as in OBJ format, every row contains the definition of a single (triangular face). Each triplet of numbers contain
+	// the vertex index (into cubeVerts), uv coords index (into cubeUVs) and normal index (into cubeNormals)
+	GLubyte cubeIndices[12 * 9] = {
+	                          4,0,0, 0,1,0, 7,2,0,
+	                          0,1,0, 3,3,0, 7,2,0,
+	                          2,4,1, 6,1,1, 7,5,1,
+	                          2,4,1, 7,5,1, 3,6,1,
+	                          1,7,2, 5,8,2, 2,9,2,
+	                          5,8,3, 6,10,3, 2,9,3,
+	                          0,11,4, 4,12,4, 1,13,4,
+	                          4,12,5, 5,14,5, 1,13,5,
+	                          4,15,6, 7,7,6, 6,12,6,
+	                          4,15,6, 6,12,6, 5,16,6,
+	                          0,17,7, 1,5,7, 2,18,7,
+	                          0,17,7, 2,18,7, 3,19,7
+	};
+
+	for (int i = 0; i < 12*9; i += 3) {
+		int vaIndex = cubeIndices[i];
+
+		*indices++ = vaIndex;
+
+		*(pos + vaIndex*3) = cubeVerts[vaIndex * 3];
+		*(pos + vaIndex*3 + 1) = cubeVerts[vaIndex * 3 + 1];
+		*(pos + vaIndex*3 + 2) = cubeVerts[vaIndex * 3 + 2];
+
+//		int uvIndex = cubeIndices[i + 1];
+//		*(uvs + uvIndex*2) = cubeUVs[uvIndex*2];
+//		*(uvs + uvIndex*2 + 1) = cubeUVs[uvIndex*2 + 1];
+
+		int nmIndex = cubeIndices[i + 2];
+		*(normals + nmIndex*3) = cubeNormals[nmIndex*3];
+		*(normals + nmIndex*3 + 1) = cubeNormals[nmIndex*3 + 1];
+		*(normals + nmIndex*3 + 2) = cubeNormals[nmIndex*3 + 2];
+	}
+	vaVertices->m_vbo->unmapData();
+	vaNormals->m_vbo->unmapData();
+//	vaTexCoords->m_vbo->unmapData();
+
+	Mesh* cube = new Mesh();
+	cube->getBounds().addPoint(1.0f, 1.0f, 1.0f);
+	cube->getBounds().addPoint(-1.0f, -1.0f, -1.0f);
+	cube->updateVertexData(vf, numVertices);
+	cube->updateIndexData(ib, numIndices);
+	vf->printData();
+	return cube;
+}
+
 Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
 
 	ulong numVertices = 2 + numSegments * (numRings - 1);
@@ -63,7 +179,7 @@ Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
 			float phi = segment * dPhi;
 			float sinTheta = sinf(theta);
 			//std::cout << "phi: " << (180.0f / M_PI) * phi << std::endl;
-//			std::cout << "theta: " << (180.0f / M_PI) * theta << std::endl;
+			//			std::cout << "theta: " << (180.0f / M_PI) * theta << std::endl;
 			float x = radius * cosf(phi) * sinTheta;
 			float y = radius * cosf(theta);
 			float z = radius * sinf(phi) * sinTheta;
@@ -135,16 +251,16 @@ Mesh* MeshFactory::createSphere(float radius, uint numSegments, uint numRings) {
 
 			// first and last rings have a single vertex
 			if (ring == 0 || ring == numRings) {
-//				std::cout << "BREAK\n";
+				//				std::cout << "BREAK\n";
 				break;
 			}
 		}
 	}
 
-//	std::cout << "indices copied " << idxCnt << std::endl;
-//	std::cout << "vertices copied " << idxVe << std::endl;
-//	std::cout << "normals copied " << idxNo << std::endl;
-//	std::cout << "uvs copied " << idxUV << std::endl;
+	//	std::cout << "indices copied " << idxCnt << std::endl;
+	//	std::cout << "vertices copied " << idxVe << std::endl;
+	//	std::cout << "normals copied " << idxNo << std::endl;
+	//	std::cout << "uvs copied " << idxUV << std::endl;
 
 	vaVertices->m_vbo->unmapData();
 	vaNormals->m_vbo->unmapData();
@@ -291,12 +407,12 @@ Mesh* MeshFactory::createQuad(const Vec3f& center, const Vec3f& facingDir, float
 	*p++ = 2;
 	*p++ = 3;
 
-//	vf->printData();
+	//	vf->printData();
 
 	Mesh* mesh = new Mesh();
 	mesh->updateVertexData(vf, 4);
 	mesh->updateIndexData(indices, 6);
-//	mesh->getIbo()->printData();
+	//	mesh->getIbo()->printData();
 	return mesh;
 }
 

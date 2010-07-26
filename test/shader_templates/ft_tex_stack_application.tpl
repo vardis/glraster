@@ -40,7 +40,5 @@ TEX_COORDS: the swizzle of the texture coordinates, e.g. xy, x, st, etc.
 
 {{/TEX_MAP_TO_DIFFUSE}}
 
-{{#TEX_MAP_TO_NORMAL}}
-{{/TEX_MAP_TO_NORMAL}}
 
 

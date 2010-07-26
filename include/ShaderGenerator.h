@@ -18,6 +18,7 @@ public:
 	static const char* const UV_SET_INDEX;
 	static const char* const S_COORD;
 	static const char* const ST_COORDS;
+	static const char* const STP_COORDS;
 	static const char* const TANGENT_SPACE_NMAP_TPL;
 
 	ShaderGenerator();

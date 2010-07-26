@@ -43,6 +43,13 @@ public:
 	 */
 	Mesh* createSphere(float radius = 1.0f, uint numSegments = 32, uint numRings = 16);
 
+	/**
+	 * Create a unit cube centered on the origin of the coordinate space.
+	 * The vertex format of the cube contains the elements Vertex_Pos, Vertex_Normal and Vertex_TexCoord0
+	 * @return the cube mesh
+	 */
+	Mesh* createCube();
+
 	std::list<Mesh*> createFromFile(String filename, bool genNormals = false, bool genUVs = false);
 
 private:

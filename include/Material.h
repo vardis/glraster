@@ -5,6 +5,7 @@
 #include "Vector.h"
 #include "Matrix4.h"
 #include "Texture.h"
+#include "TextureCubeMap.h"
 #include "GLSLProgram.h"
 
 struct TextureMapInput {
@@ -55,6 +56,9 @@ public:
 	float m_opacity;
 	bool  m_shadeless;
 
+	float m_parallaxScale;
+	float m_parallaxBias;
+
 	TextureStackPtr m_texStack;
 
 private:
@@ -68,7 +72,7 @@ private:
 	GLSLProgramPtr m_gpuProgram;
 
 public:
-	Material();
+	Material(const char* name = "");
 	~Material();
 
 	/**
@@ -124,6 +128,22 @@ public:
 	void setVertexShader(String vertexShader) {
 		this->m_vertexShader = vertexShader;
 	}
+
+	/**
+	 * Adds a new texture to the texture stack of this material.
+	 *
+	 * @param tex the texture to add
+	 * @param mapTo the kind of this texture map, i.e. where does it map to. Default is TexMapTo_Diffuse
+	 * @param blendOp the blend operation to set for this texture, defult is TexBlendOp_Multiply
+	 * @param mapInput the input to use for texture coordinates, default is TexMapInput_UV
+	 * @param factor the blend factor, default is 0.5
+	 */
+	void addTexture(TexturePtr tex, TexMapTo mapTo = TexMapTo_Diffuse, TexBlendOp blendOp = TexBlendOp_Multiply, TexMapInput mapInput = TexMapInput_UV, float factor = 0.5f);
+
+	/**
+	 * Returns the number of used textures by this material.
+	 */
+	uint8_t getActiveTextures();
 
 private:
 	void _applyTextureStack();

@@ -42,7 +42,7 @@ void main() {
 	// the normal used in shading calculations
 	vec3 N;
 
-	float shininess = u_Material.shininess;	
+//	float shininess = u_Material.shininess;	
 
 	{{>TANGENT_SPACE_NORMAL_MAP}}
 
@@ -65,9 +65,10 @@ void main() {
 	texDiffuse *= vec4(diffuse.rgb, 1.0);
 	{{/USE_LIGHTING}}
 
-	//fs_FragColor = /*vec4(1.0) +*/ ambient*u_Material.ambient + texDiffuse*u_Material.diffuse + specular*u_Material.specular;
-	fs_FragColor = texDiffuse*u_Material.diffuse;
-//	fs_FragColor = vec4(N, 1.0);
+	fs_FragColor = /*vec4(1.0) +*/ ambient*u_Material.ambient + texDiffuse*u_Material.diffuse + specular*u_Material.specular;
+
+//	fs_FragColor = vec4(0.5*(fs_FragCoordsView + 1.0), 1.0);
+//	fs_FragColor = vec4(normalize(-fs_FragCoordsView), 1.0);
 //	if (fs_FragColor.a > 0.9) fs_FragColor.rgb = vec3(1.0, 0, 0);
 	gl_FragDepth = gl_FragCoord.z;
 }

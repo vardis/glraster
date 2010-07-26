@@ -16,7 +16,10 @@ typedef enum BillboardType {
 	Billboard_Spherical
 }BillboardType;
 
-class Billboard: public Renderable {
+class Billboard;
+typedef shared_ptr<Billboard> BillboardPtr;
+
+class Billboard: public Renderable, public RenderListener {
 private:
 	BillboardType m_type;
 	Vec3f         m_upAxis;
@@ -24,10 +27,15 @@ private:
 
 
 public:
-	Billboard(BillboardType type, float width, float height);
+	static BillboardPtr create(BillboardType type, float width, float height);
 
 	virtual void renderGeometry();
-	virtual void postViewTransform(Matrix4f& xform);
+
+	/** Override that manipulates the model-view matrix in order to get a billboard effect */
+	virtual void onPostViewTransform(Renderable* r, Matrix4f& xform);
+
+protected:
+	Billboard();
 };
 
 #endif /* BILLBOARD_H_ */

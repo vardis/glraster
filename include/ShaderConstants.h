@@ -19,6 +19,8 @@ public:
 
 	static const char* const Fragment_Color;
 
+	static const char* const UNIFORM_CameraPos;
+
 	static const char* const UNIFORM_ModelViewProj;
 	static const char* const UNIFORM_ModelView;
 	static const char* const UNIFORM_Model;
@@ -34,6 +36,7 @@ public:
 	static const char* const UNIFORM_MaterialSpecular;
 	static const char* const UNIFORM_MaterialShininess;
 	static const char* const UNIFORM_MaterialOpacity;
+	static const char* const UNIFORM_MaterialParallaxScaleBias;
 
 	static const char* const UNIFORM_ObjectPlanes;
 	static const char* const UNIFORM_EyePlanes;
@@ -55,6 +58,7 @@ public:
 	static const char* const UNIFORM_LightsDiffuse[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsSpecular[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsCosSpotCutOff[MAX_LIGHTS];
+	static const char* const UNIFORM_LightsCosOuterConeSpotCutOff[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsConstAttenuation[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsLinearAttenuation[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsQuadraticAttenuation[MAX_LIGHTS];

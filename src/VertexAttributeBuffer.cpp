@@ -55,6 +55,8 @@ void VertexAttributeBuffer::deallocate() {
 void VertexAttributeBuffer::bind() {
 	if (m_vboID && glIsBuffer(m_vboID)) {
 		glBindBuffer(GL_ARRAY_BUFFER, m_vboID);
+	} else {
+		std::cerr << "cannot bind non existing VBO\n";
 	}
 }
 

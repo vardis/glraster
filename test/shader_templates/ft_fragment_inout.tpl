@@ -26,20 +26,20 @@ vec2 fs_TexCoords[] : uv coords for UV sets
 {{/HAS_COLORS}}
 
 {{#HAS_TEXTURES}}
-{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec2 fs_TexCoords[{{NUM_UV_SETS}}];
+{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec4 fs_TexCoords[{{NUM_UV_SETS}}];
 {{/HAS_TEXTURES}}
 
 {{#NORMAL_MAPPING}}
 
 // fragment coordinates in object space 
-{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec3 fs_FragCoordsObj;
+//{{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec3 fs_FragCoordsObj;
 
-// TBN matrix 
+// TBN matrix
+// the tangent, binormal and normal occupy the 0,1 and 2 rows , respectively
+// therefore this matrix should transform vectors by multiplying from the right side
 {{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} mat3 fs_TangentBasis;
 
 // vertex coordinates in tangent space
-// the tangent, binormal and normal occupy the 0,1 and 2 rows , respectively
-// therefore this matrix should transform vectors by multiplying from the right side
 {{#IN_DIRECTION}}in{{/IN_DIRECTION}} {{#OUT_DIRECTION}}out{{/OUT_DIRECTION}} vec3 tbn_vertexPos;
 
 

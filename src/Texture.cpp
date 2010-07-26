@@ -12,21 +12,27 @@
 Texture::Texture() :
 	m_filename(""), m_allocated(false), m_width(0), m_height(0), m_sourceWidth(0), m_sourceHeight(0), m_texID(0),
 			m_textureTarget(GL_TEXTURE_2D), m_internalFormat(GL_RGBA8), m_useMipmaps(false), m_hasAlpha(false),
-			m_minFilter(TexFilter_Linear), m_magFilter(TexFilter_Linear), m_wrapping(TexWrapMode_Repeat),
-			m_anisotropy(1.0f), m_envColour(Colour::WHITE) {
+			m_minFilter(TexFilter_Linear), m_magFilter(TexFilter_Linear), m_wrapping(TexWrapMode_Repeat), m_anisotropy(
+					1.0f), m_envColour(Colour::WHITE) {
 }
 
 Texture::~Texture() {
+	this->_deallocate();
+}
+
+void Texture::_deallocate() {
 	if (m_texID) {
 		glDeleteTextures(1, &m_texID);
+		m_texID = 0;
 	}
+	m_allocated = false;
 }
 
 void Texture::setData(GLenum sourceFormat, GLenum dataType, void* data) {
 	this->setMipmapData(0, sourceFormat, dataType, data);
 }
 
-void Texture::setMipmapData(uint8_t level, GLenum sourceFormat, GLenum dataType, void* data) {
+void Texture::setMipmapData(uint level, GLenum sourceFormat, GLenum dataType, void* data) {
 	if (this->isCompressed()) {
 		SAFE_THROW(GLException(E_BADOP, "Texture has compressed format, use setCompressedData instead"));
 	}
@@ -47,7 +53,6 @@ void Texture::setMipmapData(uint8_t level, GLenum sourceFormat, GLenum dataType,
 	if (m_textureTarget == GL_TEXTURE_1D) {
 		glTexSubImage1D(GL_TEXTURE_1D, level, 0, levelWidth, sourceFormat, dataType, data);
 	} else if (m_textureTarget == GL_TEXTURE_2D) {
-		std::cout << ">>>>>>tex sub image 2d with level " << (int)level << "\n";
 		glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, levelWidth, levelHeight, sourceFormat, dataType, data);
 	} else {
 		SAFE_THROW(GLException(E_NOTIMPL));
@@ -62,7 +67,7 @@ void Texture::setCompressedData(uint32_t size, void* data) {
 	this->setCompressedMipmapData(0, size, data);
 }
 
-void Texture::setCompressedMipmapData(uint8_t level, uint32_t size, void* data) {
+void Texture::setCompressedMipmapData(uint level, uint32_t size, void* data) {
 	if (!this->isCompressed()) {
 		SAFE_THROW(GLException(E_BADOP, "Texture is not compressed, use setData instead"));
 	}
@@ -82,32 +87,39 @@ void Texture::setCompressedMipmapData(uint8_t level, uint32_t size, void* data) 
 
 void Texture::allocate(GLenum internalFormat, void* data, uint32_t compressedSize) {
 
+	if (m_allocated)
+		return;
+
 	glGenTextures(1, &m_texID);
 	glBindTexture(m_textureTarget, m_texID);
 
 	m_internalFormat = internalFormat;
 
 	// allocate memory storage for the texture
-	switch (m_textureTarget) {
-	case GL_TEXTURE_1D:
-		if (!this->isCompressed()) {
+	if (!this->isCompressed()) {
+		switch (m_textureTarget) {
+		case GL_TEXTURE_1D:
 			glTexImage1D(GL_TEXTURE_1D, 0, m_internalFormat, m_width, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-		}
-		break;
-	case GL_TEXTURE_2D:
-		if (!this->isCompressed()) {
+			break;
+		case GL_TEXTURE_2D:
 			glTexImage2D(GL_TEXTURE_2D, 0, m_internalFormat, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			break;
+		case GL_TEXTURE_CUBE_MAP:
+			for (int i = GL_TEXTURE_CUBE_MAP_POSITIVE_X; i <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; i++) {
+				glTexImage2D(i, 0, m_internalFormat, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			}
+			break;
+		default:
+			// TODO: support more texture types
+			SAFE_THROW(GLException(E_NOTIMPL))
+			;
 		}
-		break;
-	default:
-		// TODO: support more texture types
-		SAFE_THROW(GLException(E_NOTIMPL));
-	}
 
-	if (m_useMipmaps && !this->isCompressed()) {
-		_allocateMipmaps();
+		if (m_useMipmaps && !this->isCompressed()) {
+			_allocateMipmaps();
+		}
+		m_allocated = true;
 	}
-	m_allocated = true;
 }
 
 bool Texture::allocate() {
@@ -118,13 +130,29 @@ bool Texture::allocate() {
 void Texture::_allocateMipmaps() {
 	uint32_t w = m_width;
 	uint32_t h = m_height;
-	uint16_t level = 1;
+	uint level = 1;
 	while (w > 1 || h > 1) {
 		if (w > 1)
 			w >>= 1;
 		if (h > 1)
 			h >>= 1;
-		glTexImage2D(GL_TEXTURE_2D, level, m_internalFormat, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		switch (m_textureTarget) {
+		case GL_TEXTURE_1D:
+			glTexImage1D(GL_TEXTURE_1D, level, m_internalFormat, w, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			break;
+		case GL_TEXTURE_2D:
+			glTexImage2D(GL_TEXTURE_2D, level, m_internalFormat, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			break;
+		case GL_TEXTURE_CUBE_MAP:
+			for (int i = GL_TEXTURE_CUBE_MAP_POSITIVE_X; i <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; i++) {
+				glTexImage2D(i, level, m_internalFormat, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			}
+			break;
+		default:
+			// TODO: support more texture types
+			SAFE_THROW(GLException(E_NOTIMPL))
+			;
+		}
 		++level;
 	}
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, level - 1);
@@ -136,7 +164,7 @@ void Texture::fromImage(const Image& img) {
 	m_height = img.getHeight();
 	m_sourceHeight = img.getHeight();
 	m_textureTarget = (m_height > 1) ? GL_TEXTURE_2D : GL_TEXTURE_1D;
-	m_internalFormat = _getInternalFormat(img.getFormat(), img.getDataType());
+	m_internalFormat = GLUtil::getInternalFormat(img.getFormat(), img.getDataType());
 	m_hasAlpha = (m_internalFormat == GL_RGBA || m_internalFormat == GL_BGRA);
 
 	if (img.hasMipmaps() || isCompressed()) {
@@ -147,20 +175,12 @@ void Texture::fromImage(const Image& img) {
 
 	if (allocate()) {
 		glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
-		//TODO: Get pixel store parameters from image
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-		glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-
+		img.setPixelStoreAttributes();
 		this->setData(img.getFormat(), img.getDataType(), img.getData());
-
 		glPopClientAttrib();
 
-		m_useMipmaps = img.hasMipmaps();
 		uint mipMapCount = (img.hasMipmaps() ? img.getNumMipmaps() + 1 : 0);
-		for (unsigned int level = 1; level < mipMapCount; ++level) {
+		for (uint level = 1; level < mipMapCount; ++level) {
 			if (this->isCompressed()) {
 				this->setCompressedMipmapData(level, img.getMipmap(level).m_compressedSize, img.getData(level));
 			} else {
@@ -168,6 +188,7 @@ void Texture::fromImage(const Image& img) {
 			}
 		}
 
+		// if the image didn't contain mipmap data, ask GL to create them for us
 		if (!img.hasMipmaps() && m_useMipmaps && !isCompressed()) {
 			glGenerateMipmap(m_textureTarget);
 		}
@@ -178,6 +199,7 @@ void Texture::fromImage(const Image& img) {
 
 void Texture::updateMipmaps() {
 	if (m_useMipmaps && !isCompressed()) {
+		this->bind();
 		glGenerateMipmap(m_textureTarget);
 	}
 }
@@ -195,7 +217,7 @@ void Texture::configureGLState() {
 
 	this->bind();
 
-	// deprecated
+	// TODO: deprecated
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, /*texStack->texOutputs[i].blendOp*/GL_MODULATE);
 	if (m_hasAlpha) {
 		glEnable(GL_BLEND);
@@ -278,60 +300,7 @@ void Texture::configureGLState() {
 
 }
 
-GLint Texture::_getInternalFormat(GLenum format, GLenum type) {
 
-	// pass through compressed format
-	if (GLUtil::isCompressedFormat(format)) {
-		return format;
-	}
-
-	//TODO: Add more cases
-	switch (format) {
-	case GL_DEPTH_COMPONENT:
-		if (type == GL_FLOAT) {
-			return GL_DEPTH_COMPONENT32F;
-		} else {
-			return GL_DEPTH_COMPONENT;
-		}
-
-	case GL_RGB:
-	case GL_BGR:
-		if (type == GL_FLOAT) {
-			return GL_RGB32F;
-		} else if (type == GL_UNSIGNED_INT) {
-			return GL_RGB32UI;
-		} else if (type == GL_UNSIGNED_INT) {
-			return GL_RGB32I;
-		} else {
-			return GL_RGB;
-		}
-
-	case GL_RGBA:
-	case GL_BGRA:
-		if (type == GL_FLOAT) {
-			return GL_RGBA32F;
-		} else if (type == GL_UNSIGNED_INT) {
-			return GL_RGBA32UI;
-		} else if (type == GL_UNSIGNED_INT) {
-			return GL_RGBA32I;
-		} else {
-			return GL_RGBA;
-		}
-
-	case GL_ALPHA:
-		return GL_ALPHA;
-
-	case GL_LUMINANCE:
-		return GL_LUMINANCE;
-
-	case GL_LUMINANCE_ALPHA:
-		return GL_LUMINANCE_ALPHA;
-
-	default:
-		std::cerr << "mismatch in texture internal format\n";
-		return GL_RGBA;
-	}
-}
 
 bool Texture::isCompressed() const {
 	return GLUtil::isCompressedFormat(m_internalFormat);

@@ -158,7 +158,7 @@ bool TTFont::create() {
 	m_tex->m_hasAlpha = true;
 
 	Material* mat = new Material();
-	mat->m_diffuse.set(0.0f);
+	mat->m_diffuse.set(1.0f);
 	mat->m_ambient.set(0.0f);
 	mat->m_specular.set(0.0f);
 	mat->m_emissive.set(0.0f);
@@ -168,14 +168,7 @@ bool TTFont::create() {
 	mat->m_shadeless = true;
 	mat->m_transparent = true;
 	mat->m_twoSided = false;
-	mat->m_texStack.reset(new TextureStack());
-	mat->m_texStack->textures[0] = m_tex;
-	mat->m_texStack->texInputs[0].mapping = TexMapInput_UV;
-	mat->m_texStack->texInputs[0].uvSet = 0;
-	mat->m_texStack->texInputs[0].texMatrix.identity();
-	mat->m_texStack->texOutputs[0].mapTo = TexMapTo_Diffuse;
-	mat->m_texStack->texOutputs[0].blendOp = TexBlendOp_Multiply;
-	mat->m_texStack->texOutputs[0].blendFactor = 0.5f;
+	mat->addTexture(m_tex, TexMapTo_Diffuse, TexBlendOp_Multiply, TexMapInput_UV, 0.5f);
 	m_material.reset(mat);
 
 	return true;

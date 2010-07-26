@@ -1,4 +1,4 @@
-in vec3 vs_VertexPos; // vertex position
+in vec4 vs_VertexPos; // vertex position
 
 {{#HAS_NORMALS}}
 in vec3 vs_Normal;

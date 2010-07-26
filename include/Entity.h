@@ -45,4 +45,6 @@ protected:
 	AABB<float> m_bounds;
 };
 
+typedef shared_ptr<Entity> EntityPtr;
+
 #endif /* ENTITY_H_ */

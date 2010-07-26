@@ -11,10 +11,11 @@
 Text::Text(TTFontPtr font) :
 	Renderable(), m_font(font), m_pos(0, 0), m_colour(), m_text(), m_geom(), m_updateGeom(false) {
 	m_material = font->getMaterial();
-	m_geom.specifyVertexFormat(VertexFormatPtr(VertexFormat::create(VF_V3_N3_T2)));
+	m_geom.specifyVertexFormat(VertexFormatPtr(VertexFormat::create(VF_V3_T2)));
 	m_vf = m_geom.getVertexFormat();
 
 	m_state.setDepthTest(false);
+	m_state.setDepthMask(false);
 	m_state.setShadeless(true);
 	m_state.setBlend(true);
 	m_state.setBlenSrcFunc(GL_SRC_ALPHA);
@@ -88,7 +89,7 @@ void Text::preRender() {
 		float lr_uv[2];
 		float hr_uv[2];
 		float hl_uv[2];
-		float normal[] = { Vec3f::Front.x, Vec3f::Front.y, Vec3f::Front.z };
+
 		Codepoint cp;
 		if (m_font->getCodepoint(codepoint, cp)) {
 
@@ -123,24 +124,18 @@ void Text::preRender() {
 			// upper triangle
 			m_geom.vertexAttrib(Vertex_Pos, ll_pos);
 			m_geom.vertexAttrib(Vertex_TexCoord0, ll_uv);
-			m_geom.vertexAttrib(Vertex_Normal, normal);
 			m_geom.vertexAttrib(Vertex_Pos, hr_pos);
 			m_geom.vertexAttrib(Vertex_TexCoord0, hr_uv);
-			m_geom.vertexAttrib(Vertex_Normal, normal);
 			m_geom.vertexAttrib(Vertex_Pos, hl_pos);
 			m_geom.vertexAttrib(Vertex_TexCoord0, hl_uv);
-			m_geom.vertexAttrib(Vertex_Normal, normal);
 
 			// lower triangle
 			m_geom.vertexAttrib(Vertex_Pos, ll_pos);
 			m_geom.vertexAttrib(Vertex_TexCoord0, ll_uv);
-			m_geom.vertexAttrib(Vertex_Normal, normal);
 			m_geom.vertexAttrib(Vertex_Pos, lr_pos);
 			m_geom.vertexAttrib(Vertex_TexCoord0, lr_uv);
-			m_geom.vertexAttrib(Vertex_Normal, normal);
 			m_geom.vertexAttrib(Vertex_Pos, hr_pos);
 			m_geom.vertexAttrib(Vertex_TexCoord0, hr_uv);
-			m_geom.vertexAttrib(Vertex_Normal, normal);
 
 			cx += cp.m_width;
 			//			std::cout << "char " << (char) codepoint << "\n";

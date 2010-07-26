@@ -25,7 +25,7 @@ void Camera::updateView() {
 	Matrix4f rotY = Matrix4f::RotationY(yawRads);
 	Matrix4f rotX = Matrix4f::Rotation(m_right, pitchRads);
 
-	m_look = rotX * rotY * Vec3f::Z_Neg_Axis;
+	m_look = rotX * rotY * Vec3f::Z_Axis;
 	m_up = rotX * m_up;
 	m_right = rotY * Vec3f::X_Axis;
 
@@ -46,8 +46,8 @@ void Camera::updateView() {
 	m_view = Matrix4f::FromBasis(m_right, m_up, -m_look);
 	m_view.transpose();
 
-	Vec3f p = m_view * m_pos;
-	m_view.setW(-p);
+	Vec3f p = m_view * -m_pos;
+	m_view.setW(p);
 
 	m_translation.set(0.0f, 0.0f, 0.0f);
 }

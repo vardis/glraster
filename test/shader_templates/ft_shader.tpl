@@ -20,12 +20,12 @@ vec2 vs_TexCoords[NUM_UV_SETS] : array of texture coordinates
 
 {{! vertex shader }}
 void main() {
-	vec4 hPos = vec4(vs_VertexPos, 1.0);
-	gl_Position = u_ModelViewProjection * hPos;
-	fs_FragCoordsView = vec3(u_ModelView * hPos);
+	gl_Position = u_ModelViewProjection * vs_VertexPos;
+	fs_FragCoordsView = vec3(u_ModelView * vs_VertexPos);
 
 {{#HAS_NORMALS}}
 	fs_Normal = u_NormalMatrix * vs_Normal;
+//	fs_Normal = (u_ModelView * vec4(vs_Normal, 0.0)).xyz;
 
 {{#NORMALIZE_NORMALS}} 
 	fs_Normal = normalize(fs_Normal);
@@ -34,13 +34,11 @@ void main() {
 {{/HAS_NORMALS}}
 
 {{#NORMAL_MAPPING}}
-fs_FragCoordsObj = vs_VertexPos;
+//fs_FragCoordsObj = vs_VertexPos;
 vec3 t = u_NormalMatrix * vs_Tangent;
 vec3 b = cross(t, fs_Normal);
 fs_TangentBasis = mat3(t, b, fs_Normal);
-tbn_vertexPos = vs_VertexPos * fs_TangentBasis;
-//fs_TangentBasis = u_NormalMatrix * mat3(vs_Tangent, vs_Binormal, vs_Normal);
-//tbn_vertexPos = vs_VertexPos * fs_TangentBasis;
+tbn_vertexPos = vs_VertexPos.xyz * fs_TangentBasis;
 {{/NORMAL_MAPPING}}
 
 {{#HAS_COLORS}}

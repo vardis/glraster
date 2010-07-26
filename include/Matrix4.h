@@ -39,7 +39,10 @@ public:
 	Matrix4<T> inversed() const;
 
 	Matrix4<T> operator*(const Matrix4<T>& _mat) const;
+	Vec4<T> operator*(const Vec4<T>& _v) const;
 	Vec3<T> operator*(const Vec3<T>& _v) const;
+
+	T operator()(uint row, uint column) const;
 
 	Vec3<T> x() const {
 		return Vec3<T> (m[0][0], m[1][0], m[2][0]);

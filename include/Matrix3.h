@@ -38,6 +38,7 @@ public:
 
 	Matrix3<T> operator*(const Matrix3<T>& _mat) const;
 	Vec3<T> operator*(const Vec3<T>& _v) const;
+	T operator()(uint row, uint column) const;
 
 	Vec3<T> x() const {
 		return Vec3<T> (m[0][0], m[1][0], m[2][0]);

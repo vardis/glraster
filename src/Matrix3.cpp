@@ -132,6 +132,12 @@ Vec3<T> Matrix3<T>::operator*(const Vec3<T>& _v) const {
 }
 
 template<typename T>
+T Matrix3<T>::operator()(uint row, uint column) const {
+	assert(row < 3 && column < 3);
+	return m[row][column];
+}
+
+template<typename T>
 Matrix3<T> Matrix3<T>::FromBasis(const Vec3<T>& _x, const Vec3<T>& _y, const Vec3<T>& _z) {
 	return Matrix3<T> (_x.x, _y.x, _z.x, _x.y, _y.y, _z.y, _x.z, _y.z, _z.z);
 }

@@ -19,6 +19,8 @@ const char* const ShaderConstants::VATTR_TexCoords[8] = { "vs_TexCoords[0]", "vs
 
 const char* const ShaderConstants::Fragment_Color = "fs_FragColor";
 
+const char* const ShaderConstants::UNIFORM_CameraPos = "u_camPos";
+
 const char* const ShaderConstants::UNIFORM_ModelViewProj = "u_ModelViewProjection";
 const char* const ShaderConstants::UNIFORM_ModelView = "u_ModelView";
 const char* const ShaderConstants::UNIFORM_Model = "u_Model";
@@ -35,6 +37,7 @@ const char* const ShaderConstants::UNIFORM_MaterialDiffuse = "u_Material.diffuse
 const char* const ShaderConstants::UNIFORM_MaterialSpecular = "u_Material.specular";
 const char* const ShaderConstants::UNIFORM_MaterialShininess = "u_Material.shininess";
 const char* const ShaderConstants::UNIFORM_MaterialOpacity = "u_Material.opacity";
+const char* const ShaderConstants::UNIFORM_MaterialParallaxScaleBias = "u_Material.parallaxScaleBias";
 
 const char* const ShaderConstants::UNIFORM_ObjectPlanes = "u_ObjectPlanes";
 const char* const ShaderConstants::UNIFORM_EyePlanes = "u_EyePlanes";
@@ -136,6 +139,15 @@ const char* const ShaderConstants::UNIFORM_LightsCosSpotCutOff[MAX_LIGHTS] = { 	
 																		"u_Lights[5].cosSpotCutOff",
 																		"u_Lights[6].cosSpotCutOff",
 																		"u_Lights[7].cosSpotCutOff" };
+
+const char* const ShaderConstants::UNIFORM_LightsCosOuterConeSpotCutOff[MAX_LIGHTS] = { 	"u_Lights[0].cosOuterConeSpotCutOff",
+																		"u_Lights[1].cosOuterConeSpotCutOff",
+																		"u_Lights[2].cosOuterConeSpotCutOff",
+																		"u_Lights[3].cosOuterConeSpotCutOff",
+																		"u_Lights[4].cosOuterConeSpotCutOff",
+																		"u_Lights[5].cosOuterConeSpotCutOff",
+																		"u_Lights[6].cosOuterConeSpotCutOff",
+																		"u_Lights[7].cosOuterConeSpotCutOff" };
 
 const char* const ShaderConstants::UNIFORM_LightsConstAttenuation[MAX_LIGHTS] = { 	"u_Lights[0].constAttenuation",
 																		"u_Lights[1].constAttenuation",

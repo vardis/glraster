@@ -202,8 +202,14 @@ enum VertexFormatTemplates {
 	/** u, v coordinates */
 	VF_T2 = 16,
 
+	/** x, y, z position, uv */
+	VF_V3_T2 = VF_V3 | VF_T2,
+
 	/** x, y, z position, RGBA color */
 	VF_V3_C4 = VF_V3 | VF_C4,
+
+	/** x, y, z position, normal */
+	VF_V3_N3 = VF_V3 | VF_N3,
 
 	/** x, y, z position, normal, RGBA color */
 	VF_V3_N3_C4 = VF_V3 | VF_N3 | VF_C4,

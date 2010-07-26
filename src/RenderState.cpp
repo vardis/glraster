@@ -15,6 +15,7 @@ RenderState::RenderState() :
 			GL_KEEP), m_stencilOpPass(GL_KEEP), m_depthTest(true), m_depthFunc(GL_LEQUAL), m_depthMask(true),
 			m_clearColorBuffer(false), m_clearDepth(1000000.0f), m_clearDepthBuffer(false), m_clearStencil(0),
 			m_clearStencilBuffer(false), m_shadeless(false) {
+	m_colorMask[0] = m_colorMask[1] = m_colorMask[2] = m_colorMask[3] = true;
 
 }
 
@@ -28,7 +29,10 @@ RenderState::RenderState(const RenderState& rs) :
 					rs.m_depthMask), m_clearColorBuffer(rs.m_clearColorBuffer), m_clearDepth(rs.m_clearDepth),
 			m_clearDepthBuffer(rs.m_clearDepthBuffer), m_clearStencil(rs.m_clearStencil), m_clearStencilBuffer(
 					rs.m_clearStencilBuffer), m_shadeless(rs.m_shadeless) {
-
+	m_colorMask[0] = rs.m_colorMask[0];
+	m_colorMask[1] = rs.m_colorMask[1];
+	m_colorMask[2] = rs.m_colorMask[2];
+	m_colorMask[3] = rs.m_colorMask[3];
 }
 
 bool RenderState::operator==(const RenderState& rs) {
@@ -36,5 +40,7 @@ bool RenderState::operator==(const RenderState& rs) {
 			== rs.m_cullFace && m_frontFace == rs.m_frontFace && m_renderMode == rs.m_renderMode && m_shadeless
 			== rs.m_shadeless && m_clearColorBuffer == rs.m_clearColorBuffer && m_clearDepthBuffer
 			== rs.m_clearDepthBuffer && m_clearStencilBuffer == rs.m_clearStencilBuffer && m_depthMask
-			== rs.m_depthMask && m_depthFunc == rs.m_depthFunc && m_clearColor == rs.m_clearColor;
+			== rs.m_depthMask && m_depthFunc == rs.m_depthFunc && m_clearColor == rs.m_clearColor
+			&& m_colorMask[0] == rs.m_colorMask[0] && m_colorMask[1] == rs.m_colorMask[1]
+            && m_colorMask[2] == rs.m_colorMask[2] && m_colorMask[3] == rs.m_colorMask[3];
 }
