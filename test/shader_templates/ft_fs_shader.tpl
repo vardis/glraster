@@ -66,7 +66,10 @@ void main() {
 	{{/USE_LIGHTING}}
 
 	fs_FragColor = /*vec4(1.0) +*/ ambient*u_Material.ambient + texDiffuse*u_Material.diffuse + specular*u_Material.specular;
-
+	
+	{{>FOG}}
+	
+//	fs_FragColor = vec4(vec3(fogFactor), 1.0);
 //	fs_FragColor = vec4(0.5*(fs_FragCoordsView + 1.0), 1.0);
 //	fs_FragColor = vec4(normalize(-fs_FragCoordsView), 1.0);
 //	if (fs_FragColor.a > 0.9) fs_FragColor.rgb = vec3(1.0, 0, 0);

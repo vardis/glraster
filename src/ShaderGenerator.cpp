@@ -25,7 +25,7 @@ ShaderGenerator::ShaderGenerator() {
 ShaderGenerator::~ShaderGenerator() {
 }
 
-void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, const VertexFormat& vf) {
+void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, const VertexFormat& vf, const FogParameters fogParams) {
 
 	bool hasNormalMap = false;
 	bool hasParallaxMap = false;
@@ -42,6 +42,11 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 
 	ctemplate::TemplateDictionary* uniformsDict = vertexShaderDict.AddIncludeDictionary("UNIFORMS");
 	uniformsDict->SetFilename("shader_templates/uniforms.tpl");
+
+	// emit the fog uniforms if necessary
+	if (fogParams.m_fogMode != FOG_NONE) {
+		uniformsDict->ShowSection("FOG");
+	}
 
 	// use lighting when material uses shading and we have normals
 	bool useLighting = !mat.m_shadeless && vf.getAttributeBySemantic(Vertex_Normal);
@@ -331,6 +336,29 @@ void ShaderGenerator::generateShaders(Material& mat, const RenderState& rs, cons
 		ctemplate::TemplateDictionary* lightingDict = fragmentShaderDict.AddIncludeDictionary("LIGHTING");
 		lightingDict->SetFilename("shader_templates/ft_lighting.tpl");
 		lightingDict->ShowSection("WITH_LIGHT_ATTENUATION");
+	}
+
+	// generate fog instructions
+	if (fogParams.m_fogMode != FOG_NONE) {
+		ctemplate::TemplateDictionary* fogDict = fragmentShaderDict.AddIncludeDictionary("FOG");
+		fogDict->SetFilename("shader_templates/ft_fs_fog.tpl");
+
+		switch (fogParams.m_fogMode) {
+		case FOG_LINEAR:
+			fogDict->ShowSection("FOG_LINEAR");
+			break;
+		case FOG_EXP:
+			fogDict->ShowSection("FOG_EXP");
+			break;
+		case FOG_EXP2:
+			fogDict->ShowSection("FOG_EXP2");
+			break;
+		case FOG_USER:
+			fogDict->ShowSection("FOG_USER");
+			break;
+		default:
+			break;
+		}
 	}
 
 	ctemplate::Template* fragmentShaderTpl = ctemplate::Template::GetTemplate("shader_templates/ft_fs_shader.tpl",

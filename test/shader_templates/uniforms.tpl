@@ -85,3 +85,15 @@ uniform Light_t u_Lights[8];
 
 {{>MATERIAL_DECL}}
 
+{{#FOG}}
+struct FogParameters_t {
+	float fogStart;
+	float fogEnd;
+	float fogDensity;
+	vec4  fogColor;
+};
+uniform FogParameters_t u_Fog;
+
+{{/FOG}}
+
+

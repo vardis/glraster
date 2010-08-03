@@ -19,6 +19,7 @@
 #define MAX_RENDER_LAYERS 20
 #define DEFAULT_LAYER 10
 
+
 class RenderablesRasterizer {
 
 private:
@@ -27,6 +28,8 @@ private:
 	MaterialDB*      m_matDB;
 	ShaderManager    m_shaders;
 	std::vector<LightPtr> m_activeLights;
+
+	FogParameters m_fogParams;
 
 public:
 	RenderablesRasterizer(ITextureManager* texMgr);
@@ -40,10 +43,16 @@ public:
 		return m_layers[i];
 	}
 
-//	void setRenderTarget(RenderTarget rt);
+    void addLight(LightPtr l);
+    void clearLights();
 
-	void addLight(LightPtr l);
-	void clearLights();
+    FogParameters getFogParameters() const {
+    	return m_fogParams;
+    }
+
+    void setFogParameters(const FogParameters params) {
+    	m_fogParams = params;
+    }
 
 private:
 	void _bindRenderState(RenderState& state);
@@ -51,6 +60,7 @@ private:
 	void _bindShaderViewingData(GLSLProgramPtr program, CameraPtr cam, Matrix4f& modelView, Matrix4f& model);
 	void bindVertexFormat(GLSLProgramPtr prog, VertexFormatPtr vf);
 	void _bindUVCoords(GLSLProgramPtr prog, TextureStackPtr texStack, VertexFormatPtr vf);
+	void _bindFogParameters(GLSLProgramPtr prog, FogParameters& fogParams);
 };
 
 #endif /* RENDERABLESRASTERIZER_H_ */

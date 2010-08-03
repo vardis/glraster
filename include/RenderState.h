@@ -10,6 +10,36 @@
 
 #include "Colour.h"
 
+typedef enum {
+	FOG_NONE,
+	FOG_LINEAR,
+	FOG_EXP,
+	FOG_EXP2,
+	FOG_USER
+}FogMode;
+
+typedef struct FogParameters {
+
+	FogParameters() : m_fogStart(0), m_fogEnd(0), m_fogDensity(0), m_fogColor(), m_fogMode(FOG_NONE) {
+	}
+
+	/** distance from the camera at which the fog starts to appear */
+	float m_fogStart;
+
+	/** distance from the camera at which the fog ends */
+	float m_fogEnd;
+
+	/** indicates the fog's density for exponential modes */
+	float m_fogDensity;
+
+	/** the fog's color */
+	Colour m_fogColor;
+
+	/** the fog mode */
+	FogMode m_fogMode;
+
+}FogParameters;
+
 /**
  * Encapsulates the values of the various OGL render states and offers a simple interface for changing
  * a set of render states or capture the current OGL render state in an instance of this class.
@@ -106,13 +136,15 @@ protected:
 	/** blending function too use for existing fragments */
 	GLenum m_blenDstFunc;
 
+	FogParameters m_fogParameters;
+
 public:
 	RenderState();
 	RenderState(const RenderState& rs);
 
 	bool operator==(const RenderState& rs);
 
-	GLenum getBlenDstFunc() const {
+    GLenum getBlenDstFunc() const {
 		return m_blenDstFunc;
 	}
 
@@ -355,6 +387,14 @@ public:
 	void setBlend(bool blend) {
 		this->m_blend = blend;
 	}
+
+    FogParameters getFogParameters() const {
+    	return m_fogParameters;
+    }
+
+    void setFogParameters(const FogParameters params) {
+    	m_fogParameters = params;
+    }
 };
 
 #endif /* RENDERSTATE_H_ */

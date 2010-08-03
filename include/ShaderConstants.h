@@ -62,6 +62,11 @@ public:
 	static const char* const UNIFORM_LightsConstAttenuation[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsLinearAttenuation[MAX_LIGHTS];
 	static const char* const UNIFORM_LightsQuadraticAttenuation[MAX_LIGHTS];
+
+	static const char* const UNIFORM_FogStart;
+	static const char* const UNIFORM_FogEnd;
+	static const char* const UNIFORM_FogColor;
+	static const char* const UNIFORM_FogDensity;
 };
 
 #endif /* SHADERCONSTANTS_H_ */

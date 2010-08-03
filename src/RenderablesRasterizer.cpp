@@ -113,7 +113,7 @@ static std::ostream& operator<<(std::ostream& os, Matrix3f mat) {
 }
 
 RenderablesRasterizer::RenderablesRasterizer(ITextureManager* texMgr) :
-	m_texMgr(texMgr), m_shaders(), m_activeLights() {
+	m_texMgr(texMgr), m_shaders(), m_activeLights(), m_fogParams() {
 
 }
 
@@ -163,14 +163,19 @@ void RenderablesRasterizer::render(Renderable* r, CameraPtr cam, uint16_t materi
 	// get the existing material and if one has not been set, use the default one
 	MaterialPtr material = r->getMaterial();
 
+	// check if the fog mode is customized for this renderable
+	FogParameters fogParams = r->getRenderState().getFogParameters();
+	if (fogParams.m_fogMode == FOG_NONE) {
+		fogParams = m_fogParams;
+	}
+
 	// get the material's shader and if no custom shader files have been specified, then generate
 	// a new shader and assign it to the material
 	GLSLProgramPtr prog = material->getGpuProgram();
 	if (material->hasCustomShaders()) {
 		material->setupShaderProgram();
 	} else if (!material->getGpuProgram()->isLinked()) {
-		ShaderGenerator shaderGen;
-		shaderGen.generateShaders(*material, r->getRenderState(), *r->getVertexFormat());
+		ShaderGenerator().generateShaders(*material, r->getRenderState(), *r->getVertexFormat(), fogParams);
 		material->setupShaderProgram();
 	}
 	material->bindShaderData();
@@ -191,11 +196,15 @@ void RenderablesRasterizer::render(Renderable* r, CameraPtr cam, uint16_t materi
 		this->_bindLights(prog, cam->getView());
 	}
 
+	// bind viewing matrices
 	this->_bindShaderViewingData(prog, cam, modelView, r->getTransform());
 
 	// bind vertex attributes
 	this->bindVertexFormat(prog, r->getVertexFormat());
 	this->_bindUVCoords(prog, material->getTexStack(), r->getVertexFormat());
+
+	// bind fog uniforms
+	_bindFogParameters(prog, fogParams);
 
 	// bind output to the current render target
 	glBindFragDataLocation(prog->m_progID, 0, ShaderConstants::Fragment_Color);
@@ -452,6 +461,13 @@ void RenderablesRasterizer::_bindUVCoords(GLSLProgramPtr prog, TextureStackPtr t
 	}
 }
 
+void RenderablesRasterizer::_bindFogParameters(GLSLProgramPtr prog, FogParameters& fogParams) {
+	prog->setUniform(ShaderConstants::UNIFORM_FogColor, fogParams.m_fogColor);
+	prog->setUniform(ShaderConstants::UNIFORM_FogStart, fogParams.m_fogStart);
+	prog->setUniform(ShaderConstants::UNIFORM_FogEnd, fogParams.m_fogEnd);
+	prog->setUniform(ShaderConstants::UNIFORM_FogDensity, fogParams.m_fogDensity);
+}
+
 void RenderablesRasterizer::addLight(LightPtr l) {
 	m_activeLights.push_back(l);
 }
@@ -459,3 +475,4 @@ void RenderablesRasterizer::addLight(LightPtr l) {
 void RenderablesRasterizer::clearLights() {
 	m_activeLights.clear();
 }
+

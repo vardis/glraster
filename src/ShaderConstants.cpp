@@ -175,3 +175,8 @@ const char* const ShaderConstants::UNIFORM_LightsQuadraticAttenuation[MAX_LIGHTS
 																		"u_Lights[5].quadraticAttenuation",
 																		"u_Lights[6].quadraticAttenuation",
 																		"u_Lights[7].quadraticAttenuation" };
+
+const char* const ShaderConstants::UNIFORM_FogStart = "u_Fog.fogStart";
+const char* const ShaderConstants::UNIFORM_FogEnd = "u_Fog.fogEnd";
+const char* const ShaderConstants::UNIFORM_FogColor = "u_Fog.fogColor";
+const char* const ShaderConstants::UNIFORM_FogDensity = "u_Fog.fogDensity";
